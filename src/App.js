@@ -193,8 +193,13 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const data = getStoredData();
+    return !data?.onboardingDone;
+  });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [intensity, setIntensity] = useState("savage");
   const [battleHistory, setBattleHistory] = useState(getBattleHistory());
   const canvasRef = useRef(null);
@@ -267,6 +272,7 @@ export default function App() {
     setShowLogin(false);
     setShowCancelConfirm(false);
     setShowDeleteConfirm(false);
+    setShowLogoutConfirm(false);
     setBattleOpponent(null);
     setBattleResult(null);
     setScreen("landing");
@@ -283,8 +289,11 @@ export default function App() {
   }
 
   // ── Stripe helpers ──────────────────────────────────────────
+  const [upgrading, setUpgrading] = useState(false);
+
   async function handleUpgrade(planId) {
     if (!user) { setShowLogin(true); return; }
+    setUpgrading(true);
     try {
       const res = await apiCall("/api/stripe/checkout", {
         method: "POST",
@@ -292,17 +301,20 @@ export default function App() {
       });
       const data = await res.json();
       if (data.type === "checkout" && data.url) {
+        // Keep upgrading=true — user is being redirected to Stripe
         window.location.href = data.url;
       } else if (data.type === "updated") {
-        // Immediate update (upgrade/downgrade of existing sub)
         setPlan(data.plan);
         setShowPaywall(false);
         setPaywallPreselect(null);
+        setUpgrading(false);
       } else {
         console.error("Checkout error:", data.error);
+        setUpgrading(false);
       }
     } catch(e) {
       console.error("Upgrade failed:", e);
+      setUpgrading(false);
     }
   }
 
@@ -717,7 +729,7 @@ export default function App() {
       for (let wy = -200; wy < 1700; wy += 160) {
         for (let wx = -200; wx < 1700; wx += 380) {
           ctx.fillText("FREE PLAN", wx, wy);
-          ctx.fillText("roastmeai.com", wx, wy + 36);
+          ctx.fillText("roastme-ai26.vercel.app", wx, wy + 36);
         }
       }
       ctx.restore();
@@ -878,7 +890,7 @@ export default function App() {
     const ctaMid = "Roast yours at ";
     const midWidth = ctx.measureText(ctaMid).width;
     ctx.font = "bold 28px Arial, sans-serif";
-    const ctaSite = "roastmeai.com";
+    const ctaSite = "roastme-ai26.vercel.app";
     const siteWidth = ctx.measureText(ctaSite).width;
     const fireWidth = 38;
     const gap = 14;
@@ -906,12 +918,12 @@ export default function App() {
           await navigator.share({
             files: [file],
             title: "RoastMe AI just destroyed me 🔥",
-            text: `🔥 RoastMe AI just destroyed me\n\nScore: ${result?.score}/10\n"${result?.oneliner}"\n\n👉 Get roasted at roastmeai.com`
+            text: `🔥 RoastMe AI just destroyed me\n\nScore: ${result?.score}/10\n"${result?.oneliner}"\n\n👉 Get roasted at roastme-ai26.vercel.app`
           });
         } else if (navigator.share) {
           await navigator.share({
             title: "RoastMe AI just destroyed me 🔥",
-            text: `🔥 RoastMe AI just destroyed me\n\nScore: ${result?.score}/10\n"${result?.oneliner}"\n\n👉 Get roasted at roastmeai.com`
+            text: `🔥 RoastMe AI just destroyed me\n\nScore: ${result?.score}/10\n"${result?.oneliner}"\n\n👉 Get roasted at roastme-ai26.vercel.app`
           });
         } else {
           const url = canvas.toDataURL("image/png");
@@ -960,6 +972,54 @@ export default function App() {
   };
 
   // LANDING
+  // ONBOARDING — shown once to new users
+  if (showOnboarding) return (
+    <div style={{...styles.app, display:"flex", flexDirection:"column", minHeight:"100vh"}}>
+      <header style={styles.header}>
+        <div style={styles.logo}>
+          <div style={styles.logoFire}><FIRE_ICON/></div>
+          <span style={{fontSize:"20px", fontWeight:900, letterSpacing:"-0.5px", color:c.text}}>ROASTME</span>
+          <span style={{fontSize:"11px", fontWeight:700, color:c.accent, marginLeft:"2px"}}>AI</span>
+        </div>
+        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
+      </header>
+      <div style={{maxWidth:"480px", margin:"0 auto", padding:"32px 20px", flex:1, display:"flex", flexDirection:"column", justifyContent:"center"}}>
+        <div style={{textAlign:"center", marginBottom:"32px"}}>
+          <div style={{width:"72px", height:"86px", margin:"0 auto 20px"}}><FIRE_ICON/></div>
+          <h1 style={{fontSize:"32px", fontWeight:900, letterSpacing:"-1px", margin:"0 0 12px", color:c.text}}>Welcome to RoastMe AI</h1>
+          <p style={{fontSize:"16px", color:c.text2, lineHeight:1.6, margin:0}}>The only AI that tells you the brutal truth — and actually helps you improve.</p>
+        </div>
+
+        <div style={{display:"flex", flexDirection:"column", gap:"12px", marginBottom:"32px"}}>
+          {[
+            { icon:"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z", title:"Paste any text", desc:"Your bio, a caption, a message, your CV — anything." },
+            { icon:"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z", title:"Choose your mode", desc:"Savage, Honest, Mentor, or Comedian. Each hits differently." },
+            { icon:"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z", title:"Get brutal feedback", desc:"A score out of 10, what's wrong, what works, and how to fix it." },
+          ].map((step, i) => (
+            <div key={i} style={{display:"flex", gap:"16px", alignItems:"flex-start", padding:"16px", background:c.bg2, borderRadius:"14px", border:`1px solid ${c.border}`}}>
+              <div style={{width:"40px", height:"40px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={step.icon}/></svg>
+              </div>
+              <div>
+                <div style={{fontWeight:700, fontSize:"15px", color:c.text, marginBottom:"4px"}}>{step.title}</div>
+                <div style={{fontSize:"13px", color:c.text2, lineHeight:1.5}}>{step.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button style={{...styles.btn, width:"100%", fontSize:"17px", padding:"18px"}} onClick={() => {
+          const data = getStoredData() || {};
+          saveData({ ...data, onboardingDone: true });
+          setShowOnboarding(false);
+        }}>
+          Get Started — It's Free
+        </button>
+        <p style={{textAlign:"center", fontSize:"13px", color:c.text2, marginTop:"12px"}}>5 free roasts per week. No credit card needed.</p>
+      </div>
+    </div>
+  );
+
   if (screen === "landing") return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -1025,17 +1085,17 @@ export default function App() {
   // LOADING
   const loadingMessages = {
     Savage: [
-      "The AI is sharpening its knives... 🔪",
+      "Sharpening the knives...",
       "Preparing the most brutal truth of your life...",
       "No mercy. No filters. No sugarcoating...",
-      "The AI just read your submission and laughed...",
-      "Buckle up. This is going to hurt. 😈"
+      "Reading your submission very carefully...",
+      "This is going to sting. In a good way."
     ],
     Honest: [
       "Cutting through the noise...",
-      "The AI is reading between the lines...",
+      "Reading between the lines...",
       "No flattery. Just facts. Processing...",
-      "Analyzing every word you wrote...",
+      "Analysing every word you wrote...",
       "The truth is loading. Brace yourself."
     ],
     Mentor: [
@@ -1046,14 +1106,14 @@ export default function App() {
       "Your growth starts now. Brace yourself."
     ],
     Comedian: [
-      "The AI is writing your roast set... 😂",
+      "Writing your roast set...",
       "Preparing material. This is going to be legendary.",
       "The crowd is waiting. The AI is cooking...",
       "Stand up comedy incoming. You asked for this.",
-      "Warning: may cause uncontrollable laughter. 💀"
+      "Warning: may cause uncontrollable laughter."
     ]
   };
-  const randomMsg = loadingMessages[mode][Math.floor(Math.random() * 5)];
+  const randomMsg = loadingMessages[mode]?.[Math.floor(Math.random() * 5)] || "Analysing your submission...";
 
   if (screen === "loading") return (
     <div style={{...styles.app, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
@@ -1062,8 +1122,9 @@ export default function App() {
       </div>
       <p style={{marginTop:"24px", fontSize:"18px", fontWeight:700, color:c.text}}>Roasting you...</p>
       <p style={{fontSize:"14px", color:c.text2, marginTop:"8px", textAlign:"center", padding:"0 40px"}}>{randomMsg}</p>
-      <button onClick={() => { setScreen("app"); setLoading(false); }} style={{marginTop:"40px", background:"none", border:"none", color:c.text2, fontSize:"13px", cursor:"pointer", padding:"8px 16px"}}>
-        ← Cancel
+      <p style={{fontSize:"12px", color:c.text2, marginTop:"16px", opacity:0.6}}>Usually takes 5–15 seconds</p>
+      <button onClick={() => { setScreen("app"); setLoading(false); }} style={{marginTop:"32px", background:"none", border:`1px solid ${c.border}`, borderRadius:"8px", color:c.text2, fontSize:"13px", cursor:"pointer", padding:"8px 20px"}}>
+        Cancel
       </button>
       <style>{`@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}`}</style>
     </div>
@@ -1179,80 +1240,44 @@ export default function App() {
           )
         )}
 
-        {/* Buttons */}
+        {/* Action buttons — max 3, clear hierarchy */}
         <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"32px"}}>
+          {/* Primary action */}
           <button style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={shareRoast}>
-            {shareMsg || (<>
+            {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
               Share My Roast
             </>)}
           </button>
-          <button style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-            Roast Again
-          </button>
-          <button style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={() => setScreen("history")}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            My History
-          </button>
-          <button style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={() => {
-            if (plan !== "brutal") { setShowPaywall(true); return; }
-            const roastData = encodeURIComponent(JSON.stringify({
-              score: result?.score,
-              oneliner: result?.oneliner,
-              mode: result?.mode,
-              verdict: result?.verdict
-            }));
-            const link = `${window.location.href.split('?')[0]}?roast=${roastData}`;
-            navigator.clipboard.writeText(link);
-            setShareMsg("Hall of Fame link copied!");
-            setTimeout(() => setShareMsg(""), 3000);
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {plan === "brutal" ? (
-                <>
-                  <path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 5H4.5a2.5 2.5 0 0 0 0 5H7"/>
-                </>
-              ) : (
-                <>
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </>
-              )}
-            </svg>
-            {plan === "brutal" ? "Copy Hall of Fame Link" : "Hall of Fame Link — Brutal Only"}
-          </button>
-          <button style={{width:"100%", padding:"16px", borderRadius:"14px", border:"none", cursor:"pointer", fontSize:"15px", fontWeight:800, color:"#fff", background:"linear-gradient(135deg, #FF4500, #B91C1C)", boxShadow:"0 4px 16px rgba(255,69,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={async () => {
+
+          {/* Secondary actions side by side */}
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px"}}>
+            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"14px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              Roast Again
+            </button>
+            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"14px"}} onClick={() => setScreen("history")}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              My History
+            </button>
+          </div>
+
+          {/* Challenge button — full width, distinct style */}
+          <button style={{width:"100%", padding:"14px", borderRadius:"14px", border:"none", cursor:"pointer", fontSize:"14px", fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #FF4500, #B91C1C)", boxShadow:"0 4px 16px rgba(255,69,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={async () => {
             const baseUrl = window.location.href.split('?')[0];
             let link;
-
             if (user && result?.supabaseRoastId) {
-              // Secure path: create UUID challenge in Supabase
               try {
                 const res = await apiCall("/api/challenges/create", {
                   method: "POST",
-                  body: JSON.stringify({
-                    roastId:   result.supabaseRoastId,
-                    score:     result?.score,
-                    oneliner:  result?.oneliner,
-                    mode:      result?.mode,
-                    inputType: inputType,
-                  }),
+                  body: JSON.stringify({ roastId: result.supabaseRoastId, score: result?.score, oneliner: result?.oneliner, mode: result?.mode, inputType }),
                 });
                 const data = await res.json();
-                if (data.challengeId) {
-                  link = `${baseUrl}?challenge=${data.challengeId}`;
-                }
-              } catch(e) { /* fall through to legacy */ }
+                if (data.challengeId) link = `${baseUrl}?challenge=${data.challengeId}`;
+              } catch(e) {}
             }
-
-            // Fallback: JSON in URL (anonymous users or Supabase unavailable)
             if (!link) {
-              const battleData = encodeURIComponent(JSON.stringify({
-                score:     result?.score,
-                oneliner:  result?.oneliner,
-                mode:      result?.mode,
-                inputType: inputType
-              }));
+              const battleData = encodeURIComponent(JSON.stringify({ score: result?.score, oneliner: result?.oneliner, mode: result?.mode, inputType }));
               link = `${baseUrl}?battle=${battleData}`;
             }
 
@@ -1386,7 +1411,7 @@ export default function App() {
             ctx.fillText("Accept the challenge →", 540, 990);
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             ctx.font = "bold 26px Arial, sans-serif";
-            ctx.fillText("roastmeai.com", 540, 1040);
+            ctx.fillText("roastme-ai26.vercel.app", 540, 1040);
 
             // Share the card
             canvas.toBlob(async (blob) => {
@@ -1433,6 +1458,25 @@ export default function App() {
             </svg>
             Challenge a Friend to Beat This
           </button>
+
+          {/* Hall of Fame — subtle link, not a full button */}
+          {plan === "brutal" ? (
+            <button onClick={() => {
+              const roastData = encodeURIComponent(JSON.stringify({ score: result?.score, oneliner: result?.oneliner, mode: result?.mode, verdict: result?.verdict }));
+              const link = `${window.location.href.split('?')[0]}?roast=${roastData}`;
+              navigator.clipboard.writeText(link);
+              setShareMsg("Hall of Fame link copied!");
+              setTimeout(() => setShareMsg(""), 3000);
+            }} style={{background:"none", border:"none", cursor:"pointer", fontSize:"12px", color:c.text2, padding:"4px 0", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", width:"100%", marginTop:"4px"}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>
+              Copy Hall of Fame Link
+            </button>
+          ) : (
+            <button onClick={() => setShowPaywall(true)} style={{background:"none", border:"none", cursor:"pointer", fontSize:"12px", color:c.text2, padding:"4px 0", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", width:"100%", marginTop:"4px"}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Hall of Fame Link — Brutal only
+            </button>
+          )}
         </div>
 
         {!isPaid && (
@@ -1483,7 +1527,7 @@ export default function App() {
             </div>
           </div>
           {user ? (
-            <button onClick={handleSignOut} style={{background:"none", border:`1px solid ${c.border}`, borderRadius:"8px", padding:"6px 12px", color:c.text2, fontSize:"12px", fontWeight:600, cursor:"pointer", flexShrink:0}}>
+            <button onClick={() => setShowLogoutConfirm(true)} style={{background:"none", border:`1px solid ${c.border}`, borderRadius:"8px", padding:"6px 12px", color:c.text2, fontSize:"12px", fontWeight:600, cursor:"pointer", flexShrink:0}}>
               Sign Out
             </button>
           ) : (
@@ -1717,6 +1761,24 @@ export default function App() {
       </div>
       {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
       {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
+
+      {/* Logout Confirmation */}
+      {showLogoutConfirm && (
+        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:200, padding:"0 0 20px"}}>
+          <div style={{background:c.bg2, borderRadius:"20px 20px 0 0", padding:"28px 24px", width:"100%", maxWidth:"480px", border:`1px solid ${c.border}`}}>
+            <div style={{textAlign:"center", marginBottom:"20px"}}>
+              <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>Sign Out?</div>
+              <div style={{fontSize:"14px", color:c.text2, lineHeight:1.5}}>Your history and progress are saved. You can sign back in at any time.</div>
+            </div>
+            <button onClick={() => { setShowLogoutConfirm(false); handleSignOut(); }} style={{width:"100%", padding:"16px", borderRadius:"12px", border:"none", background:"#FF4500", color:"#fff", fontWeight:700, fontSize:"16px", cursor:"pointer", marginBottom:"10px"}}>
+              Yes, Sign Out
+            </button>
+            <button onClick={() => setShowLogoutConfirm(false)} style={{width:"100%", padding:"16px", borderRadius:"12px", border:`1px solid ${c.border}`, background:"none", color:c.text, fontWeight:600, fontSize:"15px", cursor:"pointer"}}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
   }
@@ -1748,7 +1810,7 @@ export default function App() {
           { q:"What is Battle Mode?", a:"After any roast, you can generate a link and challenge a friend to beat your score. They submit the same type of content, get roasted, and you compare scores side by side. Battle History tracks your record on Fired Up and Brutal." },
           { q:"What is Hall of Fame?", a:"Hall of Fame lets you turn your best (or worst) roast into a permanent shareable link. Whoever opens it sees your score and one-liner. Exclusive to Brutal plan." },
           { q:"What is the Brutal badge on the share card?", a:"Brutal plan users get an exclusive badge on their share card so everyone knows they went all the way. A mark of distinction. Or suffering. Both." },
-          { q:"Does my history save between sessions?", a:"Yes — your roast history, battle history, and plan are all saved locally on your device. Sign in to eventually sync across devices (coming soon)." },
+          { q:"Does my history save between sessions?", a:"Yes — your roast history, battle history, and plan are saved locally on your device. Sign in with Google to sync across all your devices." },
           { q:"How do I cancel my plan?", a:"Go to Account → My Plan → Cancel Plan. You can downgrade to Fired Up or cancel completely. Your plan stays active until the next billing date." },
         ].map((faq, i) => (
           <div key={i} style={{...styles.card, marginBottom:"10px"}}>
@@ -1781,7 +1843,7 @@ export default function App() {
             <FIRE_ICON/>
           </div>
           <div style={{fontSize:"28px", fontWeight:900, color:c.text, letterSpacing:"-1px"}}>RoastMe AI</div>
-          <div style={{fontSize:"13px", color:c.text2, marginTop:"6px"}}>Version 1.0.0</div>
+          <div style={{fontSize:"13px", color:c.text2, marginTop:"6px"}}>Version 1.0 · {new Date().getFullYear()}</div>
         </div>
 
         <div style={{...styles.card, marginBottom:"12px"}}>
@@ -1792,19 +1854,23 @@ export default function App() {
         <div style={{...styles.card, marginBottom:"12px", padding:"8px"}}>
           {[
             { label:"Contact / Support", value:"support@roastmeai.com", href:"mailto:support@roastmeai.com" },
-            { label:"Website", value:"roastmeai.com", href:"https://roastmeai.com" },
-            { label:"Privacy Policy", value:"roastmeai.com/privacy", href:"https://roastmeai.com/privacy" },
-            { label:"Terms of Service", value:"roastmeai.com/terms", href:"https://roastmeai.com/terms" },
+            { label:"App URL", value:"roastme-ai26.vercel.app", href:"https://roastme-ai26.vercel.app" },
+            { label:"Privacy Policy", value:"Coming soon", href:null },
+            { label:"Terms of Service", value:"Coming soon", href:null },
           ].map((link, i, arr) => (
-            <a key={i} href={link.href} target="_blank" rel="noreferrer" style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 8px", borderBottom: i < arr.length-1 ? `1px solid ${c.border}` : "none", textDecoration:"none"}}>
+            <div key={i} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 8px", borderBottom: i < arr.length-1 ? `1px solid ${c.border}` : "none"}}>
               <span style={{fontSize:"14px", color:c.text, fontWeight:600}}>{link.label}</span>
-              <span style={{fontSize:"13px", color:c.accent}}>{link.value}</span>
-            </a>
+              {link.href ? (
+                <a href={link.href} target="_blank" rel="noreferrer" style={{fontSize:"13px", color:c.accent, textDecoration:"none"}}>{link.value}</a>
+              ) : (
+                <span style={{fontSize:"13px", color:c.text2}}>{link.value}</span>
+              )}
+            </div>
           ))}
         </div>
 
         <div style={{textAlign:"center", fontSize:"12px", color:c.text2, marginTop:"20px"}}>
-          Made with 🔥 by RoastMe AI<br/>
+          Made with love by RoastMe AI<br/>
           <span style={{marginTop:"4px", display:"block"}}>© 2026 RoastMe AI. All rights reserved.</span>
         </div>
       </div>
@@ -2208,9 +2274,9 @@ export default function App() {
                 {history.length >= 2 && history[0].score > history[history.length-1].score ? (
                     <span style={{fontSize:"13px", color:"#22C55E", fontWeight:700}}>You're improving! +{history[0].score - history[history.length-1].score} points</span>
                 ) : history.length >= 2 && history[0].score < history[history.length-1].score ? (
-                  <span style={{fontSize:"13px", color:"#FF4500", fontWeight:700}}>📉 Score dropped {history[history.length-1].score - history[0].score} points — time to step up</span>
+                  <span style={{fontSize:"13px", color:"#FF4500", fontWeight:700}}>Score dropped {history[history.length-1].score - history[0].score} points — time to step up</span>
                 ) : (
-                  <span style={{fontSize:"13px", color:"#FFB300", fontWeight:700}}>➡️ Consistent score — push for higher</span>
+                  <span style={{fontSize:"13px", color:"#FFB300", fontWeight:700}}>Consistent score — push for higher</span>
                 )}
               </div>
             </div>
@@ -2256,7 +2322,14 @@ export default function App() {
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
             </div>
             <div style={{fontWeight:700, marginBottom:"8px", color:c.text}}>No roasts yet</div>
-            <div style={{fontSize:"14px", marginBottom:"24px"}}>Get your first roast to see history</div>
+            <div style={{fontSize:"14px", marginBottom:"24px"}}>
+              {user ? "Your roasts will appear here after your first session" : "Sign in to save and sync your history across devices"}
+            </div>
+            {!user && (
+              <button onClick={() => setShowLogin(true)} style={{...styles.btnOutline, padding:"12px 24px", fontSize:"14px", display:"flex", alignItems:"center", gap:"8px", margin:"0 auto 16px"}}>
+                Sign In to Save History
+              </button>
+            )}
             <button style={{...styles.btn, padding:"14px 28px", fontSize:"15px", display:"flex", alignItems:"center", gap:"8px", margin:"0 auto"}} onClick={() => setScreen("app")}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
               Get Roasted Now
@@ -2291,9 +2364,9 @@ export default function App() {
         </div>
         <div style={{display:"flex", gap:"8px", alignItems:"center"}}>
           {user ? (
-            <div onClick={handleSignOut} style={{display:"flex", alignItems:"center", gap:"7px", cursor:"pointer"}} title="Sign out">
-              <div style={{width:"28px", height:"28px", borderRadius:"50%", background:`${c.accent}20`, border:`1px solid ${c.accent}40`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-                <span style={{fontSize:"11px", fontWeight:800, color:c.accent}}>
+            <div onClick={() => setScreen("profile")} style={{display:"flex", alignItems:"center", gap:"7px", cursor:"pointer"}} title="My Account">
+              <div style={{width:"32px", height:"32px", borderRadius:"50%", background:`${c.accent}20`, border:`1.5px solid ${c.accent}60`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"border-color 0.2s"}}>
+                <span style={{fontSize:"12px", fontWeight:800, color:c.accent}}>
                   {(user.email?.[0] || "?").toUpperCase()}
                 </span>
               </div>
@@ -2385,11 +2458,8 @@ export default function App() {
 
           {!imageData && (
             <button
-              onClick={() => {
-                if (!isPaid) { setShowPaywall(true); return; }
-                alert("Image upload is coming soon! Currently our AI processes text only. Stay tuned for the update. 🔥");
-              }}
-              style={{position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", width:"100%", background:"none", border:`1.5px solid ${c.border}`, borderRadius:"12px", padding:"14px", color:c.text2, fontSize:"14px", fontWeight:600, cursor:"pointer", marginBottom:"10px", opacity:0.6}}
+              onClick={() => { if (!isPaid) { setShowPaywall(true); } }}
+              style={{position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", width:"100%", background:"none", border:`1.5px dashed ${c.border}`, borderRadius:"12px", padding:"14px", color:c.text2, fontSize:"14px", fontWeight:600, cursor: isPaid ? "default" : "pointer", marginBottom:"10px", opacity:0.5}}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -2629,7 +2699,7 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect }) {
   const plans = [
     { id:"free", name:"Free", price:"", period:"", features:["5 roasts/week","600 characters per roast","All 4 modes","Shareable card with watermark","Battle Mode"] },
     { id:"fired_up", name:"Fired Up", popular:true, price:"$2.99", period:"/month", features:["Unlimited roasts","2,000 characters per roast","The Fix — we rewrite it for you","Clean card — no watermark","Full roast history","Battle History — track your wins","Weekly Summary"] },
-    { id:"brutal", name:"Brutal", price:"$5.99", period:"/month", features:["Everything in Fired Up","4,000 characters per roast","Deep Roast — 7 detailed problems + 7 fixes","5 Intensity Levels — Mild to Obliterate","Progress Tracking","Hall of Fame link","Brutal badge on share card","Leaderboard — coming soon"] },
+    { id:"brutal", name:"Brutal", price:"$5.99", period:"/month", features:["Everything in Fired Up","4,000 characters per roast","Deep Roast — 7 detailed problems + 7 fixes","5 Intensity Levels — Mild to Obliterate","Progress Tracking","Hall of Fame link","Brutal badge on share card","Leaderboard"] },
   ];
   const isPaidUser = currentPlan === "fired_up" || currentPlan === "brutal";
 
