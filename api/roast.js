@@ -122,8 +122,17 @@ export default async function handler(req, res) {
   // ── API key ───────────────────────────────────────────────────
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_API_KEY) {
-    return res.status(500).json({ error: "API not configured" });
+    return res.status(500).json({ error: "API not configured", debug: "GROQ_API_KEY is empty or undefined" });
   }
+
+  // Temporary diagnostic — remove after fixing
+  const keyDiag = {
+    exists: !!GROQ_API_KEY,
+    length: GROQ_API_KEY.length,
+    startsWithGsk: GROQ_API_KEY.startsWith("gsk_"),
+    firstChars: GROQ_API_KEY.substring(0, 8),
+    hasSpaces: GROQ_API_KEY !== GROQ_API_KEY.trim(),
+  };
 
   // ── Build prompt server-side ──────────────────────────────────
   const systemPrompt = buildSystemPrompt(mode, plan, intensity);
@@ -150,7 +159,10 @@ export default async function handler(req, res) {
     const data = await groqRes.json();
 
     if (!groqRes.ok) {
-      return res.status(groqRes.status).json({ error: data.error?.message || "AI error" });
+      return res.status(groqRes.status).json({
+        error: data.error?.message || "AI error",
+        debug: groqRes.status === 401 ? keyDiag : undefined
+      });
     }
 
     const raw = (data.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
