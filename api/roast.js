@@ -3,7 +3,8 @@
 // Plan enforcement will move to Supabase token validation in Phase 1.
 
 const ALLOWED_ORIGINS = [
-  "https://roastmeai.vercel.app",
+  "https://roastme-ai26.vercel.app",  // actual production domain
+  "https://roastmeai.vercel.app",      // keep for if domain changes
   "https://roastmeai.com",
   "https://www.roastmeai.com"
 ];
