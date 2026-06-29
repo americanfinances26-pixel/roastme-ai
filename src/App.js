@@ -104,56 +104,7 @@ function incrementImagesUsed() {
   saveData({ ...data, imageMonthStart, imagesUsed: used + 1 });
 }
 
-// ── Weekly Challenge helpers ──────────────────────────────
-const CHALLENGE_LIST = [
-  { prompt:"Roast your LinkedIn headline",         hint:"Most professionals waste this space on job titles anyone could Google." },
-  { prompt:"Roast your Instagram bio",             hint:"You have 150 characters. Most people use them to list hobbies nobody asked about." },
-  { prompt:"Roast your CV summary",                hint:"The first paragraph recruiters read — and usually the first thing that loses them." },
-  { prompt:"Roast your cold email opener",         hint:"The line that decides if it gets read or deleted. No pressure." },
-  { prompt:"Roast your About page",                hint:"The page that should explain what you do. It usually explains what you've done." },
-  { prompt:"Roast your dating profile bio",        hint:"40 words to make a stranger want to meet you. Most people use them to say they like travel." },
-  { prompt:"Roast your Twitter/X bio",             hint:"One line that should make someone want to follow you. Most people make it a CV." },
-  { prompt:"Roast your portfolio intro",           hint:"Your first impression to any client or employer who lands on your site." },
-  { prompt:"Roast your business pitch",            hint:"The 2-sentence version you use when someone asks what you do." },
-  { prompt:"Roast your personal website headline", hint:"The first thing anyone reads. Most headlines are forgettable by design." },
-  { prompt:"Roast your conference speaker bio",    hint:"Written by you, read by everyone, embarrassing to nobody but yourself." },
-  { prompt:"Roast your email signature",           hint:"The last thing people see. Usually the least thought-out thing you've written." },
-  { prompt:"Roast your Slack status or intro",     hint:"The text your team reads every day and you wrote once in 2022." },
-  { prompt:"Roast your newsletter subject line",   hint:"The difference between opened and ignored is usually this one line." },
-  { prompt:"Roast your product tagline",           hint:"One line that should sell your idea. Most taglines describe it instead." },
-  { prompt:"Roast your personal mission statement",hint:"The sentence that's supposed to define your direction. Usually doesn't." },
-  { prompt:"Roast your cover letter opening",      hint:"The paragraph that should make you memorable. Most openers are identical." },
-  { prompt:"Roast your meetup or event bio",       hint:"What people read before deciding whether to attend your talk." },
-  { prompt:"Roast your Airbnb host description",   hint:"What makes strangers trust you with their holiday." },
-  { prompt:"Roast your podcast description",       hint:"The text that convinces someone to listen to your show instead of anyone else's." },
-];
 
-function getWeekNum() {
-  return Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
-}
-
-function getCurrentChallenge() {
-  return CHALLENGE_LIST[getWeekNum() % CHALLENGE_LIST.length];
-}
-
-function getChallengeState() {
-  const data = getStoredData();
-  const weekNum = getWeekNum();
-  if (!data?.challengeWeek || data.challengeWeek !== weekNum) {
-    return { started: false, completed: false, weekNum };
-  }
-  return { started: data.challengeStarted || false, completed: data.challengeCompleted || false, weekNum };
-}
-
-function markChallengeStarted() {
-  const data = getStoredData() || {};
-  saveData({ ...data, challengeWeek: getWeekNum(), challengeStarted: true });
-}
-
-function markChallengeCompleted() {
-  const data = getStoredData() || {};
-  saveData({ ...data, challengeWeek: getWeekNum(), challengeStarted: true, challengeCompleted: true });
-}
 
 function saveToHistory(roast) {
   // Guard: only save if there's meaningful data in localStorage (user is active)
@@ -277,7 +228,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
     },
   ];
 
-  const HIDDEN_SCREENS = ["landing", "onboarding", "loading"];
+  const HIDDEN_SCREENS = ["onboarding", "loading"];
   if (HIDDEN_SCREENS.includes(screen)) return null;
 
   return (
@@ -385,7 +336,6 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [challengeState, setChallengeState] = useState(() => getChallengeState());
   const [histTab, setHistTab] = useState("roasts");
   const [showInsights, setShowInsights] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -842,12 +792,7 @@ export default function App() {
       if (!parsed || typeof parsed.score === "undefined") throw new Error("Invalid response from AI");
       parsed.mode = mode;
       parsed.input = imageData ? "📷 Image upload" : text.slice(0, 60) + (text.length > 60 ? "..." : "");
-      // Mark weekly challenge completed if this roast was the challenge
-      const currentChallenge = getCurrentChallenge();
-      if (text.toLowerCase().startsWith(currentChallenge.prompt.toLowerCase().replace("roast your ", "").slice(0, 10).toLowerCase())) {
-        markChallengeCompleted();
-        setChallengeState(getChallengeState());
-      }
+
       setResult(parsed);
 
       // 1. Save locally (always, immediate)
@@ -1348,6 +1293,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -1879,25 +1825,9 @@ export default function App() {
     let streak=0;
     for(let i=0;i<battleHistory.length;i++){if(battleHistory[i].result==="win")streak++;else break;}
 
-    // Avatar colours to pick from
-    const AVATAR_COLORS = ["#FF4500","#7C3AED","#0EA5E9","#10B981","#F59E0B","#EC4899","#EF4444","#8B5CF6"];
 
-    const GOALS = [
-      {id:"linkedin",    label:"Improve LinkedIn"},
-      {id:"dating",      label:"Improve Dating Profile"},
-      {id:"communication",label:"Improve Communication"},
-      {id:"career",      label:"Improve Career"},
-      {id:"social",      label:"Improve Social Media"},
-      {id:"other",       label:"Other"},
-    ];
-    const PROFESSIONS = [
-      {id:"marketing",label:"Marketing"},
-      {id:"sales",    label:"Sales"},
-      {id:"tech",     label:"Tech"},
-      {id:"design",   label:"Design"},
-      {id:"student",  label:"Student"},
-      {id:"other",    label:"Other"},
-    ];
+
+
 
     const saveProfileField = async (field, value) => {
       const data = getStoredData() || {};
@@ -1928,18 +1858,9 @@ export default function App() {
             {/* Avatar with colour picker */}
             <div style={{position:"relative", flexShrink:0}}>
               <div style={{width:"76px", height:"76px", borderRadius:"50%",
-                background:`${avatarColor}22`, border:`2.5px solid ${avatarColor}70`,
+                background:`${c.accent}22`, border:`2.5px solid ${c.accent}60`,
                 display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:"30px", fontWeight:900, color:avatarColor, cursor:"pointer",
-                userSelect:"none"}}
-                onClick={() => {
-                  const idx = AVATAR_COLORS.indexOf(avatarColor);
-                  const next = AVATAR_COLORS[(idx+1)%AVATAR_COLORS.length];
-                  setAvatarColor(next);
-                  saveProfileField("avatar_color", next);
-                }}
-                title="Tap to change colour"
-              >
+                fontSize:"30px", fontWeight:900, color:c.accent, userSelect:"none"}}>
                 {user ? (displayName?.[0]||user.email?.[0]||"?").toUpperCase() : "?"}
               </div>
               {isPaid && (
@@ -2023,19 +1944,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Avatar colour hint */}
-          {user && (
-            <div style={{display:"flex", gap:"6px", alignItems:"center", marginBottom:"4px"}}>
-              {AVATAR_COLORS.map(col => (
-                <div key={col} onClick={()=>{setAvatarColor(col);saveProfileField("avatar_color",col);}}
-                  style={{width:"18px", height:"18px", borderRadius:"50%", background:col, cursor:"pointer",
-                    border:`2px solid ${avatarColor===col?"#fff":"transparent"}`,
-                    boxShadow: avatarColor===col?"0 0 0 1px "+col:"none",
-                    transition:"all 0.15s", flexShrink:0}}/>
-              ))}
-              <span style={{fontSize:"11px", color:c.text2, marginLeft:"4px"}}>Avatar colour</span>
-            </div>
-          )}
+
         </div>
 
         {/* ── PROGRESS ─────────────────────────────────── */}
@@ -2084,46 +1993,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PERSONAL GROWTH PROFILE ──────────────────── */}
-        {user && (
-          <div style={{padding:"20px 20px 0"}}>
-            <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Personal Growth Profile</div>
 
-            {/* Main Goal */}
-            <div style={{marginBottom:"16px"}}>
-              <div style={{fontSize:"13px", fontWeight:600, color:c.text, marginBottom:"10px"}}>Main Goal</div>
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px"}}>
-                {GOALS.map(g => (
-                  <button key={g.id} onClick={async()=>{setMainGoal(g.id);await saveProfileField("main_goal",g.id);}}
-                    style={{padding:"10px 12px", borderRadius:"10px", border:`1.5px solid ${mainGoal===g.id?c.accent:c.border}`,
-                      background: mainGoal===g.id?`${c.accent}15`:"none",
-                      color: mainGoal===g.id?c.accent:c.text2,
-                      fontSize:"13px", fontWeight: mainGoal===g.id?700:500,
-                      cursor:"pointer", textAlign:"left", transition:"all 0.15s"}}>
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Profession */}
-            <div style={{marginBottom:"4px"}}>
-              <div style={{fontSize:"13px", fontWeight:600, color:c.text, marginBottom:"10px"}}>Profession</div>
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px"}}>
-                {PROFESSIONS.map(p => (
-                  <button key={p.id} onClick={async()=>{setProfession(p.id);await saveProfileField("profession",p.id);}}
-                    style={{padding:"10px 8px", borderRadius:"10px", border:`1.5px solid ${profession===p.id?c.accent:c.border}`,
-                      background: profession===p.id?`${c.accent}15`:"none",
-                      color: profession===p.id?c.accent:c.text2,
-                      fontSize:"13px", fontWeight: profession===p.id?700:500,
-                      cursor:"pointer", textAlign:"center", transition:"all 0.15s"}}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── PLAN ─────────────────────────────────────── */}
         <div style={{padding:"20px 20px 0"}}>
@@ -3680,8 +3550,6 @@ export default function App() {
           ) : (
             <>
               {(() => {
-                const challenge = getCurrentChallenge();
-
                 const basePlaceholder = inputType === "💕 My Bio" ? "Paste your dating or social media bio..."
                   : inputType === "📸 My Caption" ? "Paste the caption you're about to post..."
                   : inputType === "💬 Should I Send This?" ? "Paste the message you're nervous about sending..."
@@ -3690,50 +3558,11 @@ export default function App() {
 
                 return (
                   <>
-                    {/* C1 — Weekly Challenge card */}
-                    {(history.length === 0 || inputType === "Anything") && !text && (() => {
-                      const ch = getCurrentChallenge();
-                      const cs = challengeState;
-                      const done = cs.completed;
-                      return (
-                        <div style={{background: done ? `${c.accent}08` : c.bg2, border:`1px solid ${done ? c.accent + "40" : c.border}`, borderRadius:"16px", padding:"16px 18px", marginBottom:"14px", transition:"all 0.3s"}}>
-                          {/* Header row */}
-                          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"10px"}}>
-                            <div style={{fontSize:"10px", fontWeight:700, color:c.accent, letterSpacing:"1.2px", textTransform:"uppercase"}}>This Week's Challenge</div>
-                            {done
-                              ? <div style={{fontSize:"11px", fontWeight:700, color:"#22C55E", display:"flex", alignItems:"center", gap:"4px"}}>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                  Completed
-                                </div>
-                              : cs.started
-                              ? <div style={{fontSize:"11px", color:c.text2}}>In progress</div>
-                              : null
-                            }
-                          </div>
-                          {/* Challenge title */}
-                          <div style={{fontSize:"16px", fontWeight:800, color:c.text, marginBottom:"5px", lineHeight:1.3}}>{ch.prompt}</div>
-                          <div style={{fontSize:"12px", color:c.text2, lineHeight:1.5, marginBottom: done ? "0" : "14px"}}>{ch.hint}</div>
-                          {/* CTA — hide when done */}
-                          {!done && (
-                            <button
-                              onClick={() => {
-                                setText(ch.prompt + ": ");
-                                markChallengeStarted();
-                                setChallengeState(getChallengeState());
-                              }}
-                              style={{background:c.accent, color:"#fff", border:"none", borderRadius:"9px", padding:"9px 18px", fontSize:"13px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:"7px"}}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-                              Try this challenge
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })()}
+
                     <textarea
                       style={styles.textarea}
                       rows={7}
-                      placeholder={inputType === "Anything" && !text ? `${challenge.prompt}...` : basePlaceholder}
+                      placeholder={basePlaceholder}
                       value={text}
                       onChange={e => setText(e.target.value)}
                     />
