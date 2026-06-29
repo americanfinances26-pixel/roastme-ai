@@ -296,7 +296,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
 
 
 // ─── Reusable screen components ─────────────────────────
-function EmptyState({ icon, title, sub, cta, onCta, styles, c }) {
+function EmptyState({ icon, title, sub, cta, onCta, c }) {
   return (
     <div style={{textAlign:"center", padding:"48px 24px"}}>
       <div style={{width:"64px", height:"64px", borderRadius:"50%", background:`${c.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
@@ -304,7 +304,7 @@ function EmptyState({ icon, title, sub, cta, onCta, styles, c }) {
       </div>
       <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{title}</div>
       <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"24px", maxWidth:"260px", margin:"0 auto 24px"}}>{sub}</div>
-      {cta && <button onClick={onCta} style={{...styles.btn, padding:"13px 28px", fontSize:"15px"}}>{cta}</button>}
+      {cta && <button onClick={onCta} style={{background:"#FF4500", color:"#fff", border:"none", borderRadius:"14px", padding:"13px 28px", fontSize:"15px", fontWeight:700, cursor:"pointer"}}>{cta}</button>}
     </div>
   );
 }
@@ -2470,6 +2470,7 @@ export default function App() {
         </button>
       </div>
       <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
+      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); setUpgradeError(""); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
     </div>
   );
 
@@ -3233,7 +3234,7 @@ export default function App() {
         <div style={{padding:"12px 20px 100px"}}>
           {histTab === "roasts" ? (
             history.length === 0 ? (
-              <EmptyState styles={styles} c={c}
+              <EmptyState c={c}
                 icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>}
                 title="Start your first roast"
                 sub={user ? "Your progress will appear here. Start your first roast." : "Sign in to save your history and track your progress across devices."}
@@ -3346,7 +3347,7 @@ export default function App() {
             )
           ) : (
             battleHistory.length === 0 ? (
-              <EmptyState styles={styles} c={c}
+              <EmptyState c={c}
                 icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>}
                 title="No battles yet"
                 sub="Challenge someone and start climbing."
@@ -3980,4 +3981,3 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeE
     </div>
   );
 }
-        
