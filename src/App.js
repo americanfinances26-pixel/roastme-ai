@@ -229,7 +229,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
       label: "Roast",
       screens: ["app", "loading", "result"],
       icon: (active) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth={active ? "2.5" : "1.8"} strokeLinecap="round" strokeLinejoin="round" opacity={active ? 1 : 0.45}>
           <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
         </svg>
       )
@@ -239,7 +239,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
       label: "History",
       screens: ["history", "battle-history"],
       icon: (active) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth={active ? "2.5" : "1.8"} strokeLinecap="round" strokeLinejoin="round" opacity={active ? 1 : 0.45}>
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
@@ -252,7 +252,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
       label: "Battle",
       screens: ["battle-hub", "battle-intro", "battle-result"],
       icon: (active) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth={active ? "2.5" : "1.8"} strokeLinecap="round" strokeLinejoin="round" opacity={active ? 1 : 0.45}>
           <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
           <path d="M13 19l6-6"/>
           <path d="M16 16l4 4"/>
@@ -269,7 +269,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
       label: "Account",
       screens: ["profile", "help", "about", "privacy", "terms"],
       icon: (active) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth={active ? "2.5" : "1.8"} strokeLinecap="round" strokeLinejoin="round" opacity={active ? 1 : 0.45}>
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
@@ -277,7 +277,7 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
     },
   ];
 
-  const HIDDEN_SCREENS = ["landing", "onboarding", "loading", "challenge-expired", "halloffame", "battle-intro", "battle-result"];
+  const HIDDEN_SCREENS = ["landing", "onboarding", "loading"];
   if (HIDDEN_SCREENS.includes(screen)) return null;
 
   return (
@@ -317,7 +317,8 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
             <span style={{
               fontSize: "10px",
               fontWeight: active ? 700 : 500,
-              color: active ? "#FF4500" : c.text2,
+              color: "#FF4500",
+              opacity: active ? 1 : 0.45,
               letterSpacing: "0.3px",
               transition: "color 0.15s",
             }}>
@@ -385,6 +386,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [challengeState, setChallengeState] = useState(() => getChallengeState());
+  const [histTab, setHistTab] = useState("roasts");
+  const [showInsights, setShowInsights] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     const data = getStoredData();
     return !data?.onboardingDone;
@@ -395,6 +398,12 @@ export default function App() {
   const [displayName, setDisplayName] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [username, setUsername] = useState(() => getStoredData()?.username || "");
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [mainGoal, setMainGoal] = useState(() => getStoredData()?.mainGoal || "");
+  const [profession, setProfession] = useState(() => getStoredData()?.profession || "");
+  const [avatarColor, setAvatarColor] = useState(() => getStoredData()?.avatarColor || "#FF4500");
   const [intensity, setIntensity] = useState("savage");
   const [battleHistory, setBattleHistory] = useState(getBattleHistory());
   const canvasRef = useRef(null);
@@ -470,6 +479,9 @@ export default function App() {
     setShowLogoutConfirm(false);
     setDisplayName("");
     setEditingName(false);
+    setUsername("");
+    setMainGoal("");
+    setProfession("");
     setBattleOpponent(null);
     setBattleResult(null);
     setScreen("landing");
@@ -637,6 +649,10 @@ export default function App() {
           setPlanState(effectivePlan);
           savePlan(effectivePlan);
           if (profile.display_name) setDisplayName(profile.display_name);
+          if (profile.username) setUsername(profile.username);
+          if (profile.main_goal) setMainGoal(profile.main_goal);
+          if (profile.profession) setProfession(profile.profession);
+          if (profile.avatar_color) setAvatarColor(profile.avatar_color);
           await runMigrationIfNeeded(profile);
         }
       }
@@ -1212,6 +1228,7 @@ export default function App() {
       <div style={{fontSize:"22px", fontWeight:900, color:c.text, marginBottom:"8px"}}>Challenge Expired</div>
       <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"28px", maxWidth:"300px"}}>This challenge link has expired. Challenge links are valid for 7 days.</div>
       <button onClick={() => setScreen("app")} style={{...styles.btn, padding:"14px 28px", fontSize:"15px"}}>Start Your Own Roast</button>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -1829,236 +1846,393 @@ export default function App() {
     </div>
   );
 
-  // PROFILE — Premium Account Page
+  // PROFILE — Evolution Profile
   if (screen === "profile") {
-    const billingDate = getBillingDate(plan);
-    const billingStr = formatBillingDate(billingDate);
-    const avgScore = history.length > 0
-      ? Math.round(history.reduce((a,b) => a + (b.score||0), 0) / history.length * 10) / 10
-      : null;
-    const trend = history.length >= 3
-      ? (history[0].score > history[history.length-1].score ? "↑ Improving" : history[0].score < history[history.length-1].score ? "↓ Dropped" : "→ Steady")
-      : null;
+    const sc = (s) => s <= 3 ? "#FF4500" : s <= 6 ? "#FFB300" : "#22C55E";
 
-    const SECTION = ({ label, children, last }) => (
-      <div style={{marginBottom: last ? 0 : "8px"}}>
-        <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", padding:"16px 20px 8px"}}>{label}</div>
-        <div style={{background:c.bg2, borderRadius:"16px", border:`1px solid ${c.border}`, overflow:"hidden"}}>{children}</div>
-      </div>
-    );
+    // Compute stats
+    const allScores  = history.map(h => h.score || 0).filter(s => s > 0);
+    const avgScore   = allScores.length > 0
+      ? Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length*10)/10 : null;
+    const bestScore  = allScores.length > 0 ? Math.max(...allScores) : null;
 
-    const ROW = ({ icon, label, sub, right, onClick, last, danger }) => (
-      <div onClick={onClick} style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", borderBottom: last ? "none" : `1px solid ${c.border}`, cursor: onClick ? "pointer" : "default", background:"none"}}>
-        <div style={{width:"34px", height:"34px", borderRadius:"10px", background: danger ? "#FF450018" : `${c.accent}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-          {icon}
-        </div>
-        <div style={{flex:1, minWidth:0}}>
-          <div style={{fontSize:"15px", fontWeight:600, color: danger ? "#FF4500" : c.text}}>{label}</div>
-          {sub && <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>{sub}</div>}
-        </div>
-        {right}
-        {onClick && !right && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
+    // Communication Score (overall)
+    const weighted   = allScores.map((s,i) => s*(1+(allScores.length-1-i)*0.05));
+    const commScore  = allScores.length >= 3
+      ? Math.min(10, Math.round(weighted.reduce((a,b)=>a+b,0)/weighted.length*10)/10) : null;
+
+    // Battle rank
+    const wins = battleHistory.filter(b=>b.result==="win").length;
+    const RANKS = [
+      {name:"Bronze I",min:0,next:3},{name:"Bronze II",min:3,next:7},
+      {name:"Silver I",min:7,next:12},{name:"Silver II",min:12,next:18},
+      {name:"Gold I",min:18,next:25},{name:"Gold II",min:25,next:33},
+      {name:"Platinum",min:33,next:42},{name:"Diamond",min:42,next:null},
+    ];
+    const rank = [...RANKS].reverse().find(r=>wins>=r.min)||RANKS[0];
+    const rankColor = rank.name.startsWith("Diamond")?"#818CF8"
+      :rank.name.startsWith("Platinum")?"#22D3EE"
+      :rank.name.startsWith("Gold")?"#FFB300"
+      :rank.name.startsWith("Silver")?"#A0AEC0":"#CD7F32";
+
+    // Battle streak
+    let streak=0;
+    for(let i=0;i<battleHistory.length;i++){if(battleHistory[i].result==="win")streak++;else break;}
+
+    // Avatar colours to pick from
+    const AVATAR_COLORS = ["#FF4500","#7C3AED","#0EA5E9","#10B981","#F59E0B","#EC4899","#EF4444","#8B5CF6"];
+
+    const GOALS = [
+      {id:"linkedin",    label:"Improve LinkedIn"},
+      {id:"dating",      label:"Improve Dating Profile"},
+      {id:"communication",label:"Improve Communication"},
+      {id:"career",      label:"Improve Career"},
+      {id:"social",      label:"Improve Social Media"},
+      {id:"other",       label:"Other"},
+    ];
+    const PROFESSIONS = [
+      {id:"marketing",label:"Marketing"},
+      {id:"sales",    label:"Sales"},
+      {id:"tech",     label:"Tech"},
+      {id:"design",   label:"Design"},
+      {id:"student",  label:"Student"},
+      {id:"other",    label:"Other"},
+    ];
+
+    const saveProfileField = async (field, value) => {
+      const data = getStoredData() || {};
+      saveData({...data, [field.replace('_','')]: value});
+      if (user) {
+        try { await supabase.from("profiles").update({[field]: value}).eq("id", user.id); } catch {}
+      }
+    };
+
+    const StatCard = ({label, value, color, sub}) => (
+      <div style={{background:c.bg3, borderRadius:"14px", padding:"14px 12px", textAlign:"center"}}>
+        <div style={{fontSize:"26px", fontWeight:900, color: color || c.accent, lineHeight:1}}>{value ?? "—"}</div>
+        {sub && <div style={{fontSize:"10px", color:color||c.accent, fontWeight:700, marginTop:"2px", opacity:0.8}}>{sub}</div>}
+        <div style={{fontSize:"11px", color:c.text2, marginTop:"4px"}}>{label}</div>
       </div>
     );
 
     return (
     <div style={{...styles.app, paddingBottom:"80px"}}>
-      {/* Hero identity area */}
-      <div style={{padding:"28px 20px 20px", background: dark ? "linear-gradient(180deg, #111 0%, #0A0A0A 100%)" : "linear-gradient(180deg, #F5F5F5 0%, #FAFAFA 100%)", borderBottom:`1px solid ${c.border}`}}>
-        <div style={{maxWidth:"480px", margin:"0 auto", display:"flex", alignItems:"center", gap:"16px"}}>
-          {/* Avatar */}
-          <div style={{position:"relative", flexShrink:0}}>
-            <div style={{width:"72px", height:"72px", borderRadius:"50%", background:`${c.accent}20`, border:`2.5px solid ${c.accent}50`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"28px", fontWeight:900, color:c.accent}}>
-              {user ? (displayName?.[0] || user.email?.[0] || "?").toUpperCase()
-                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+      <div style={{maxWidth:"480px", margin:"0 auto"}}>
+
+        {/* ── HERO ─────────────────────────────────────── */}
+        <div style={{padding:"28px 20px 24px", borderBottom:`1px solid ${c.border}`}}>
+
+          {/* Avatar row */}
+          <div style={{display:"flex", alignItems:"flex-start", gap:"16px", marginBottom:"20px"}}>
+
+            {/* Avatar with colour picker */}
+            <div style={{position:"relative", flexShrink:0}}>
+              <div style={{width:"76px", height:"76px", borderRadius:"50%",
+                background:`${avatarColor}22`, border:`2.5px solid ${avatarColor}70`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"30px", fontWeight:900, color:avatarColor, cursor:"pointer",
+                userSelect:"none"}}
+                onClick={() => {
+                  const idx = AVATAR_COLORS.indexOf(avatarColor);
+                  const next = AVATAR_COLORS[(idx+1)%AVATAR_COLORS.length];
+                  setAvatarColor(next);
+                  saveProfileField("avatar_color", next);
+                }}
+                title="Tap to change colour"
+              >
+                {user ? (displayName?.[0]||user.email?.[0]||"?").toUpperCase() : "?"}
+              </div>
+              {isPaid && (
+                <div style={{position:"absolute", bottom:"-2px", right:"-2px",
+                  background: plan==="brutal"?"#FF4500":"#FFB300",
+                  borderRadius:"8px", padding:"2px 6px", fontSize:"8px", fontWeight:900,
+                  color:"#fff", border:`2px solid ${dark?"#0A0A0A":"#FAFAFA"}`}}>
+                  {plan==="brutal"?"BRUTAL":"FIRED UP"}
+                </div>
+              )}
             </div>
-            {isPaid && (
-              <div style={{position:"absolute", bottom:"-1px", right:"-1px", background: plan==="brutal" ? "#FF4500" : "#FFB300", borderRadius:"8px", padding:"2px 6px", fontSize:"9px", fontWeight:900, color:"#fff", border:`2px solid ${dark?"#111":"#F5F5F5"}`, whiteSpace:"nowrap"}}>
-                {plan==="brutal" ? "BRUTAL" : "FIRED UP"}
+
+            {/* Name + username + member since */}
+            <div style={{flex:1, minWidth:0}}>
+              {user ? (
+                <>
+                  {/* Display name */}
+                  {editingName ? (
+                    <div style={{display:"flex", gap:"6px", marginBottom:"4px"}}>
+                      <input value={nameInput} onChange={e=>setNameInput(e.target.value)}
+                        onKeyDown={async e=>{
+                          if(e.key==="Enter"){if(nameInput.trim()){setDisplayName(nameInput.trim());await supabase.from("profiles").update({display_name:nameInput.trim()}).eq("id",user.id);}setEditingName(false);}
+                          if(e.key==="Escape")setEditingName(false);
+                        }} autoFocus placeholder="Your name"
+                        style={{flex:1,padding:"6px 10px",borderRadius:"8px",border:`1.5px solid ${c.accent}`,background:c.bg3,color:c.text,fontSize:"16px",fontWeight:700,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={async()=>{if(nameInput.trim()){setDisplayName(nameInput.trim());await supabase.from("profiles").update({display_name:nameInput.trim()}).eq("id",user.id);}setEditingName(false);}}
+                        style={{padding:"6px 12px",borderRadius:"8px",background:c.accent,color:"#fff",border:"none",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>Save</button>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"3px"}}>
+                      <div style={{fontSize:"20px", fontWeight:800, color:c.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                        {displayName || user.email?.split("@")[0] || "User"}
+                      </div>
+                      <button onClick={()=>{setNameInput(displayName||user.email?.split("@")[0]||"");setEditingName(true);}}
+                        style={{background:"none",border:"none",cursor:"pointer",padding:"2px",color:c.text2,flexShrink:0}}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Username */}
+                  {editingUsername ? (
+                    <div style={{display:"flex", gap:"6px", marginBottom:"4px"}}>
+                      <div style={{display:"flex", alignItems:"center", flex:1, background:c.bg3, borderRadius:"8px", border:`1.5px solid ${c.accent}`, padding:"0 10px"}}>
+                        <span style={{color:c.text2, fontSize:"14px"}}>@</span>
+                        <input value={usernameInput} onChange={e=>setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""))}
+                          onKeyDown={async e=>{
+                            if(e.key==="Enter"){if(usernameInput.trim()){setUsername(usernameInput.trim());await saveProfileField("username",usernameInput.trim());}setEditingUsername(false);}
+                            if(e.key==="Escape")setEditingUsername(false);
+                          }} autoFocus placeholder="username"
+                          style={{flex:1,background:"none",border:"none",color:c.text,fontSize:"14px",fontWeight:600,outline:"none",fontFamily:"inherit",padding:"6px 4px"}}/>
+                      </div>
+                      <button onClick={async()=>{if(usernameInput.trim()){setUsername(usernameInput.trim());await saveProfileField("username",usernameInput.trim());}setEditingUsername(false);}}
+                        style={{padding:"6px 12px",borderRadius:"8px",background:c.accent,color:"#fff",border:"none",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>Save</button>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex", alignItems:"center", gap:"5px", marginBottom:"4px"}}>
+                      <div style={{fontSize:"13px", color:c.text2, fontWeight:500}}>
+                        {username ? `@${username}` : <span style={{color:c.accent, cursor:"pointer"}} onClick={()=>{setUsernameInput("");setEditingUsername(true);}}>+ Add username</span>}
+                      </div>
+                      {username && (
+                        <button onClick={()=>{setUsernameInput(username);setEditingUsername(true);}}
+                          style={{background:"none",border:"none",cursor:"pointer",padding:"1px",color:c.text2}}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{fontSize:"11px", color:c.text2, opacity:0.6}}>
+                    Member since {user.created_at ? new Date(user.created_at).toLocaleDateString("en-GB",{month:"long",year:"numeric"}) : "today"}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"6px"}}>Guest</div>
+                  <div style={{fontSize:"13px", color:c.text2, marginBottom:"14px"}}>Sign in to track your evolution</div>
+                  <button onClick={()=>setShowLogin(true)} style={{...styles.btn, padding:"10px 20px", fontSize:"14px"}}>Sign In</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Avatar colour hint */}
+          {user && (
+            <div style={{display:"flex", gap:"6px", alignItems:"center", marginBottom:"4px"}}>
+              {AVATAR_COLORS.map(col => (
+                <div key={col} onClick={()=>{setAvatarColor(col);saveProfileField("avatar_color",col);}}
+                  style={{width:"18px", height:"18px", borderRadius:"50%", background:col, cursor:"pointer",
+                    border:`2px solid ${avatarColor===col?"#fff":"transparent"}`,
+                    boxShadow: avatarColor===col?"0 0 0 1px "+col:"none",
+                    transition:"all 0.15s", flexShrink:0}}/>
+              ))}
+              <span style={{fontSize:"11px", color:c.text2, marginLeft:"4px"}}>Avatar colour</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── PROGRESS ─────────────────────────────────── */}
+        {(allScores.length > 0 || battleHistory.length > 0) && (
+          <div style={{padding:"20px 20px 0"}}>
+            <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Your Progress</div>
+
+            {/* Communication Score — hero stat */}
+            {commScore !== null && (
+              <div style={{background:`${c.accent}10`, border:`1px solid ${c.accent}30`, borderRadius:"16px", padding:"16px 20px", marginBottom:"12px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontSize:"11px", fontWeight:700, color:c.accent, letterSpacing:"1px", textTransform:"uppercase", marginBottom:"4px"}}>Communication Score</div>
+                  <div style={{fontSize:"48px", fontWeight:900, lineHeight:1, color:sc(commScore)}}>
+                    {commScore}<span style={{fontSize:"22px", fontWeight:400, color:c.text2}}>/10</span>
+                  </div>
+                </div>
+                {/* Arc */}
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="28" fill="none" stroke={dark?"#1E1E1E":"#E5E5E5"} strokeWidth="6"/>
+                  <circle cx="36" cy="36" r="28" fill="none"
+                    stroke={sc(commScore)} strokeWidth="6"
+                    strokeDasharray={`${(commScore/10)*175.9} 175.9`}
+                    strokeLinecap="round" transform="rotate(-90 36 36)"
+                    style={{transition:"stroke-dasharray 0.8s ease"}}/>
+                  <text x="36" y="41" textAnchor="middle" fontSize="12" fontWeight="800" fill={sc(commScore)}>
+                    {commScore>=8?"Strong":commScore>=5?"Good":"Growing"}
+                  </text>
+                </svg>
+              </div>
+            )}
+
+            {/* Stats grid */}
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px", marginBottom:"12px"}}>
+              <StatCard label="Roasts" value={history.length} color={c.accent}/>
+              <StatCard label="Avg Score" value={avgScore ? `${avgScore}` : null} color={avgScore ? sc(avgScore) : c.text2}/>
+              <StatCard label="Best Score" value={bestScore ? `${bestScore}` : null} color={bestScore ? sc(bestScore) : c.text2}/>
+            </div>
+
+            {/* Battle stats */}
+            {battleHistory.length > 0 && (
+              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"12px"}}>
+                <StatCard label="Battle Rank" value={rank.name} color={rankColor}/>
+                <StatCard label="Win Streak" value={streak >= 1 ? `${streak}` : "0"} sub={streak>=3?"On fire":null} color={streak>=3?c.accent:c.text2}/>
               </div>
             )}
           </div>
+        )}
 
-          {/* Name + email */}
-          <div style={{flex:1, minWidth:0}}>
-            {user ? (
-              <>
-                {editingName ? (
-                  <div style={{display:"flex", gap:"8px", alignItems:"center", marginBottom:"4px"}}>
-                    <input value={nameInput} onChange={e => setNameInput(e.target.value)}
-                      onKeyDown={async e => {
-                        if (e.key === "Enter") { if (nameInput.trim()) { setDisplayName(nameInput.trim()); await supabase.from("profiles").update({ display_name: nameInput.trim() }).eq("id", user.id); } setEditingName(false); }
-                        if (e.key === "Escape") setEditingName(false);
-                      }} autoFocus placeholder="Your name..."
-                      style={{flex:1, padding:"8px 12px", borderRadius:"10px", border:`1.5px solid ${c.accent}`, background:c.bg3, color:c.text, fontSize:"16px", fontWeight:700, outline:"none", fontFamily:"inherit"}}/>
-                    <button onClick={async () => { if (nameInput.trim()) { setDisplayName(nameInput.trim()); await supabase.from("profiles").update({ display_name: nameInput.trim() }).eq("id", user.id); } setEditingName(false); }}
-                      style={{padding:"8px 14px", borderRadius:"10px", background:c.accent, color:"#fff", border:"none", fontWeight:700, fontSize:"14px", cursor:"pointer", whiteSpace:"nowrap"}}>Save</button>
-                  </div>
-                ) : (
-                  <div style={{display:"flex", alignItems:"center", gap:"8px", marginBottom:"3px"}}>
-                    <div style={{fontWeight:800, fontSize:"20px", color:c.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-                      {displayName || user.email?.split("@")[0] || "User"}
-                    </div>
-                    <button onClick={() => { setNameInput(displayName || user.email?.split("@")[0] || ""); setEditingName(true); }}
-                      style={{background:"none", border:"none", cursor:"pointer", padding:"3px", color:c.text2, flexShrink:0}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                  </div>
-                )}
-                <div style={{fontSize:"13px", color:c.text2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{user.email}</div>
-                <div style={{fontSize:"11px", color:c.text2, marginTop:"3px", opacity:0.6}}>
-                  Member since {user.created_at ? new Date(user.created_at).toLocaleDateString("en-GB", {month:"long", year:"numeric"}) : "today"}
+        {/* ── PERSONAL GROWTH PROFILE ──────────────────── */}
+        {user && (
+          <div style={{padding:"20px 20px 0"}}>
+            <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Personal Growth Profile</div>
+
+            {/* Main Goal */}
+            <div style={{marginBottom:"16px"}}>
+              <div style={{fontSize:"13px", fontWeight:600, color:c.text, marginBottom:"10px"}}>Main Goal</div>
+              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px"}}>
+                {GOALS.map(g => (
+                  <button key={g.id} onClick={async()=>{setMainGoal(g.id);await saveProfileField("main_goal",g.id);}}
+                    style={{padding:"10px 12px", borderRadius:"10px", border:`1.5px solid ${mainGoal===g.id?c.accent:c.border}`,
+                      background: mainGoal===g.id?`${c.accent}15`:"none",
+                      color: mainGoal===g.id?c.accent:c.text2,
+                      fontSize:"13px", fontWeight: mainGoal===g.id?700:500,
+                      cursor:"pointer", textAlign:"left", transition:"all 0.15s"}}>
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Profession */}
+            <div style={{marginBottom:"4px"}}>
+              <div style={{fontSize:"13px", fontWeight:600, color:c.text, marginBottom:"10px"}}>Profession</div>
+              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px"}}>
+                {PROFESSIONS.map(p => (
+                  <button key={p.id} onClick={async()=>{setProfession(p.id);await saveProfileField("profession",p.id);}}
+                    style={{padding:"10px 8px", borderRadius:"10px", border:`1.5px solid ${profession===p.id?c.accent:c.border}`,
+                      background: profession===p.id?`${c.accent}15`:"none",
+                      color: profession===p.id?c.accent:c.text2,
+                      fontSize:"13px", fontWeight: profession===p.id?700:500,
+                      cursor:"pointer", textAlign:"center", transition:"all 0.15s"}}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── PLAN ─────────────────────────────────────── */}
+        <div style={{padding:"20px 20px 0"}}>
+          <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Plan</div>
+          <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", overflow:"hidden"}}>
+            <div style={{padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:"15px", fontWeight:700, color:c.text}}>
+                  {plan==="free"?"Free Plan":plan==="fired_up"?"Fired Up — $2.99/mo":"Brutal — $5.99/mo"}
                 </div>
-              </>
-            ) : (
-              <>
-                <div style={{fontWeight:800, fontSize:"18px", color:c.text, marginBottom:"4px"}}>Guest</div>
-                <div style={{fontSize:"13px", color:c.text2, marginBottom:"12px"}}>Sign in to sync your data across devices</div>
-                <button onClick={() => setShowLogin(true)} style={{...styles.btn, padding:"10px 20px", fontSize:"14px"}}>Sign In</button>
-              </>
+                <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>
+                  {plan==="free"?"5 roasts per week":"Active subscription"}
+                </div>
+              </div>
+              {plan==="free"
+                ? <button onClick={()=>setShowPaywall(true)} style={{background:c.accent,color:"#fff",border:"none",borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:700,cursor:"pointer"}}>Upgrade</button>
+                : <button onClick={()=>setShowCancelConfirm(true)} style={{background:"none",color:c.text2,border:`1px solid ${c.border}`,borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Manage</button>
+              }
+            </div>
+            {showCancelConfirm && (
+              <div style={{padding:"14px 16px", borderTop:`1px solid ${c.border}`}}>
+                <button onClick={()=>{handleOpenPortal();setShowCancelConfirm(false);}}
+                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:c.bg3,border:`1px solid ${c.border}`,color:c.text,fontWeight:600,cursor:"pointer",fontSize:"13px",marginBottom:"8px",textAlign:"left"}}>
+                  Open Billing Portal
+                </button>
+                <button onClick={()=>setShowCancelConfirm(false)}
+                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:"none",border:"none",color:c.text2,fontWeight:600,cursor:"pointer",fontSize:"13px"}}>
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Stats strip — only when logged in and has data */}
-        {user && history.length > 0 && (
-          <div style={{maxWidth:"480px", margin:"16px auto 0", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px"}}>
-            {[
-              { val: history.length, label: "Roasts" },
-              { val: avgScore ? `${avgScore}/10` : "—", label: "Avg Score" },
-              { val: battleHistory.filter(b=>b.result==="win").length, label: "Wins" },
-            ].map((s,i) => (
-              <div key={i} style={{textAlign:"center", padding:"10px 6px", background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", borderRadius:"12px"}}>
-                <div style={{fontSize:"20px", fontWeight:900, color:c.accent}}>{s.val}</div>
-                <div style={{fontSize:"11px", color:c.text2, marginTop:"2px"}}>{s.label}</div>
+        {/* ── PREFERENCES ──────────────────────────────── */}
+        <div style={{padding:"20px 20px 0"}}>
+          <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Preferences</div>
+          <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", overflow:"hidden"}}>
+            {/* Dark mode */}
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:`1px solid ${c.border}`}}>
+              <span style={{fontSize:"14px", fontWeight:600, color:c.text}}>{dark?"Dark Mode":"Light Mode"}</span>
+              <button onClick={toggleDark} style={{width:"46px",height:"27px",borderRadius:"20px",border:"none",background:dark?c.accent:c.bg3,cursor:"pointer",position:"relative",flexShrink:0,transition:"background 0.2s"}}>
+                <div style={{position:"absolute",top:"2.5px",left:dark?"21px":"2.5px",width:"22px",height:"22px",borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}}/>
+              </button>
+            </div>
+            <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", cursor:"pointer", borderBottom:`1px solid ${c.border}`}} onClick={()=>setScreen("help")}>
+              <span style={{fontSize:"14px", fontWeight:600, color:c.text, flex:1}}>Help & FAQ</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", cursor:"pointer"}} onClick={()=>setScreen("about")}>
+              <span style={{fontSize:"14px", fontWeight:600, color:c.text, flex:1}}>About & Legal</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        {/* ── DATA & ACCOUNT ────────────────────────────── */}
+        {user && (
+          <div style={{padding:"20px 20px 32px"}}>
+            <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Data & Account</div>
+            <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", overflow:"hidden"}}>
+              <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", cursor:"pointer", borderBottom:`1px solid ${c.border}`}}
+                onClick={()=>{const blob=new Blob([JSON.stringify({history,battleHistory,plan,email:user?.email,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roastme-export.json";a.click();}}>
+                <span style={{fontSize:"14px", fontWeight:600, color:c.text, flex:1}}>Export My Data</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </div>
-            ))}
+              <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", cursor:"pointer", borderBottom:`1px solid ${c.border}`}}
+                onClick={()=>setShowLogoutConfirm(true)}>
+                <span style={{fontSize:"14px", fontWeight:600, color:c.text, flex:1}}>Sign Out</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              </div>
+              <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", cursor:"pointer"}}
+                onClick={()=>setShowDeleteConfirm(true)}>
+                <span style={{fontSize:"14px", fontWeight:600, color:"#FF4500", flex:1}}>Delete Account</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </div>
+            </div>
           </div>
         )}
+
       </div>
 
-      {/* Sections */}
-      <div style={{maxWidth:"480px", margin:"0 auto", padding:"16px 16px 32px"}}>
+      {showPaywall && <Paywall c={c} onClose={()=>{setShowPaywall(false);setPaywallPreselect(null);}} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showLogin && <LoginModal c={c} dark={dark} onClose={()=>setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
 
-        {/* PLAN */}
-        <SECTION label="Plan">
-          <ROW
-            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}
-            label={plan === "free" ? "Free Plan" : plan === "fired_up" ? "Fired Up — $2.99/mo" : "Brutal — $5.99/mo"}
-            sub={plan === "free" ? "5 roasts per week" : billingStr ? `Renews ${billingStr}` : "Active subscription"}
-            right={
-              plan === "free"
-                ? <button onClick={() => setShowPaywall(true)} style={{background:c.accent, color:"#fff", border:"none", borderRadius:"8px", padding:"7px 14px", fontSize:"12px", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap"}}>Upgrade</button>
-                : <button onClick={() => setShowCancelConfirm(true)} style={{background:"none", color:c.text2, border:`1px solid ${c.border}`, borderRadius:"8px", padding:"7px 14px", fontSize:"12px", fontWeight:600, cursor:"pointer", whiteSpace:"nowrap"}}>Manage</button>
-            }
-            last={!showCancelConfirm}
-          />
-          {showCancelConfirm && (
-            <div style={{padding:"16px", borderTop:`1px solid ${c.border}`}}>
-              <div style={{fontSize:"14px", fontWeight:700, color:c.text, marginBottom:"12px"}}>Manage your plan</div>
-              {plan === "brutal" && (
-                <button onClick={() => { handleUpgrade("fired_up"); setShowCancelConfirm(false); }} style={{width:"100%", padding:"13px", borderRadius:"12px", background:`${c.accent}15`, border:`1px solid ${c.accent}40`, color:c.text, fontWeight:700, cursor:"pointer", fontSize:"14px", marginBottom:"8px", textAlign:"left"}}>
-                  <div style={{color:c.accent, fontWeight:800}}>Switch to Fired Up — $2.99/mo</div>
-                  <div style={{fontSize:"12px", color:c.text2, fontWeight:400, marginTop:"2px"}}>Keep unlimited roasts at a lower price</div>
-                </button>
-              )}
-              <button onClick={() => { handleOpenPortal(); setShowCancelConfirm(false); }} style={{width:"100%", padding:"13px", borderRadius:"12px", background:"transparent", border:`1px solid ${c.border}`, color:c.text2, fontWeight:600, cursor:"pointer", fontSize:"13px", marginBottom:"8px", textAlign:"left"}}>
-                <div style={{fontWeight:700, color:c.text}}>Open Billing Portal</div>
-                <div style={{fontSize:"12px", marginTop:"2px"}}>Cancel, update payment, view invoices</div>
-              </button>
-              <button onClick={() => setShowCancelConfirm(false)} style={{width:"100%", padding:"12px", borderRadius:"12px", background:c.bg3, border:"none", color:c.text, fontWeight:700, cursor:"pointer", fontSize:"14px"}}>
-                Keep {plan === "brutal" ? "Brutal" : "Fired Up"}
-              </button>
-            </div>
-          )}
-        </SECTION>
-
-        {/* PREFERENCES */}
-        <SECTION label="Preferences">
-          <ROW
-            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg>}
-            label={dark ? "Dark Mode" : "Light Mode"}
-            sub="Toggle appearance"
-            right={
-              <button onClick={toggleDark} style={{width:"46px", height:"27px", borderRadius:"20px", border:"none", background: dark ? c.accent : c.bg3, cursor:"pointer", position:"relative", flexShrink:0, transition:"background 0.2s"}}>
-                <div style={{position:"absolute", top:"2.5px", left: dark ? "21px" : "2.5px", width:"22px", height:"22px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}}/>
-              </button>
-            }
-          />
-          <ROW icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} label="Help & FAQ" sub="How it works, common questions" onClick={() => setScreen("help")}/>
-          <ROW icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>} label="About & Legal" sub="Version, privacy policy, terms" onClick={() => setScreen("about")} last/>
-        </SECTION>
-
-        {/* DATA */}
-        <SECTION label="Data">
-          <ROW
-            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
-            label="Export My Data"
-            sub="Download your history as JSON"
-            last
-            onClick={() => {
-              const blob = new Blob([JSON.stringify({ history, battleHistory, plan, email:user?.email, exportedAt:new Date().toISOString() }, null, 2)], {type:"application/json"});
-              const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "roastme-export.json"; a.click();
-            }}
-          />
-        </SECTION>
-
-        {/* DANGER ZONE */}
-        {user && (
-          <SECTION label="Account">
-            <ROW
-              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
-              label="Sign Out" sub="You can sign back in anytime" onClick={() => setShowLogoutConfirm(true)} danger
-            />
-            <ROW
-              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
-              label="Delete Account" sub="Permanently delete all your data" onClick={() => setShowDeleteConfirm(true)} danger last
-            />
-          </SECTION>
-        )}
-      </div>
-
-      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
-      {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
-
-      {/* Logout Confirmation */}
+      {/* Logout confirm */}
       {showLogoutConfirm && (
-        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:200, padding:"0 0 20px"}}>
-          <div style={{background:c.bg2, borderRadius:"20px 20px 0 0", padding:"28px 24px", width:"100%", maxWidth:"480px", border:`1px solid ${c.border}`}}>
-            <div style={{textAlign:"center", marginBottom:"20px"}}>
-              <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>Sign Out?</div>
-              <div style={{fontSize:"14px", color:c.text2, lineHeight:1.5}}>Your history and progress are saved. You can sign back in at any time.</div>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,padding:"0 0 20px"}}>
+          <div style={{background:c.bg2,borderRadius:"20px 20px 0 0",padding:"28px 24px",width:"100%",maxWidth:"480px",border:`1px solid ${c.border}`}}>
+            <div style={{textAlign:"center",marginBottom:"20px"}}>
+              <div style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"8px"}}>Sign Out?</div>
+              <div style={{fontSize:"14px",color:c.text2,lineHeight:1.5}}>Your progress is saved. Sign back in any time.</div>
             </div>
-            <button onClick={() => { setShowLogoutConfirm(false); handleSignOut(); }} style={{width:"100%", padding:"16px", borderRadius:"12px", border:"none", background:"#FF4500", color:"#fff", fontWeight:700, fontSize:"16px", cursor:"pointer", marginBottom:"10px"}}>
-              Yes, Sign Out
-            </button>
-            <button onClick={() => setShowLogoutConfirm(false)} style={{width:"100%", padding:"16px", borderRadius:"12px", border:`1px solid ${c.border}`, background:"none", color:c.text, fontWeight:600, fontSize:"15px", cursor:"pointer"}}>
-              Cancel
-            </button>
+            <button onClick={()=>{setShowLogoutConfirm(false);handleSignOut();}} style={{width:"100%",padding:"16px",borderRadius:"12px",border:"none",background:"#FF4500",color:"#fff",fontWeight:700,fontSize:"16px",cursor:"pointer",marginBottom:"10px"}}>Yes, Sign Out</button>
+            <button onClick={()=>setShowLogoutConfirm(false)} style={{width:"100%",padding:"16px",borderRadius:"12px",border:`1px solid ${c.border}`,background:"none",color:c.text,fontWeight:600,fontSize:"15px",cursor:"pointer"}}>Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation */}
+      {/* Delete confirm */}
       {showDeleteConfirm && (
-        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:200, padding:"0 0 20px"}}>
-          <div style={{background:c.bg2, borderRadius:"20px 20px 0 0", padding:"28px 24px", width:"100%", maxWidth:"480px", border:`1px solid #FF450040`}}>
-            <div style={{textAlign:"center", marginBottom:"20px"}}>
-              <div style={{fontSize:"18px", fontWeight:800, color:"#FF4500", marginBottom:"8px"}}>Delete Account?</div>
-              <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6}}>This will permanently delete your account, all your roasts, and all your data. This cannot be undone.</div>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,padding:"0 0 20px"}}>
+          <div style={{background:c.bg2,borderRadius:"20px 20px 0 0",padding:"28px 24px",width:"100%",maxWidth:"480px",border:`1px solid #FF450040`}}>
+            <div style={{textAlign:"center",marginBottom:"20px"}}>
+              <div style={{fontSize:"18px",fontWeight:800,color:"#FF4500",marginBottom:"8px"}}>Delete Account?</div>
+              <div style={{fontSize:"14px",color:c.text2,lineHeight:1.6}}>This permanently deletes your account, roasts, and all data. Cannot be undone.</div>
             </div>
-            <button onClick={async () => {
-              try {
-                await supabase.from("profiles").delete().eq("id", user.id);
-                await supabase.auth.admin?.deleteUser(user.id).catch(() => {});
-              } catch(e) {}
-              clearUserState();
-            }} style={{width:"100%", padding:"16px", borderRadius:"12px", border:"none", background:"#FF4500", color:"#fff", fontWeight:700, fontSize:"16px", cursor:"pointer", marginBottom:"10px"}}>
-              Delete Everything
-            </button>
-            <button onClick={() => setShowDeleteConfirm(false)} style={{width:"100%", padding:"16px", borderRadius:"12px", border:`1px solid ${c.border}`, background:"none", color:c.text, fontWeight:600, fontSize:"15px", cursor:"pointer"}}>
-              Keep My Account
-            </button>
+            <button onClick={async()=>{try{await supabase.from("profiles").delete().eq("id",user.id);}catch{}clearUserState();}} style={{width:"100%",padding:"16px",borderRadius:"12px",border:"none",background:"#FF4500",color:"#fff",fontWeight:700,fontSize:"16px",cursor:"pointer",marginBottom:"10px"}}>Delete Everything</button>
+            <button onClick={()=>setShowDeleteConfirm(false)} style={{width:"100%",padding:"16px",borderRadius:"12px",border:`1px solid ${c.border}`,background:"none",color:c.text,fontWeight:600,fontSize:"15px",cursor:"pointer"}}>Keep My Account</button>
           </div>
         </div>
       )}
@@ -2068,7 +2242,7 @@ export default function App() {
     );
   }
 
-    // HELP & FAQ
+      // HELP & FAQ
   if (screen === "help") return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -2142,6 +2316,7 @@ export default function App() {
           </div>
         ))}
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2174,6 +2349,7 @@ export default function App() {
           </div>
         ))}
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2304,6 +2480,7 @@ export default function App() {
           </div>
         ))}
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2336,6 +2513,7 @@ export default function App() {
           Get My Own Roast
         </button>
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2387,6 +2565,7 @@ export default function App() {
           {plan === "brutal" ? "Get Roasted Now" : "Unlock with Brutal"}
         </button>
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2705,8 +2884,6 @@ export default function App() {
 
   // HISTORY — Tabs: Roasts + Battles
   if (screen === "history") {
-    const [histTab, setHistTab] = React.useState("roasts");
-    const [showInsights, setShowInsights] = React.useState(false);
 
     const EmptyState = ({ icon, title, sub, cta, onCta }) => (
       <div style={{textAlign:"center", padding:"48px 24px"}}>
