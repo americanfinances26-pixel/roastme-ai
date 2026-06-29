@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://lrlqnuyezqyffjwcitqw.supabase.co";
@@ -104,6 +104,57 @@ function incrementImagesUsed() {
   saveData({ ...data, imageMonthStart, imagesUsed: used + 1 });
 }
 
+// ── Weekly Challenge helpers ──────────────────────────────
+const CHALLENGE_LIST = [
+  { prompt:"Roast your LinkedIn headline",         hint:"Most professionals waste this space on job titles anyone could Google." },
+  { prompt:"Roast your Instagram bio",             hint:"You have 150 characters. Most people use them to list hobbies nobody asked about." },
+  { prompt:"Roast your CV summary",                hint:"The first paragraph recruiters read — and usually the first thing that loses them." },
+  { prompt:"Roast your cold email opener",         hint:"The line that decides if it gets read or deleted. No pressure." },
+  { prompt:"Roast your About page",                hint:"The page that should explain what you do. It usually explains what you've done." },
+  { prompt:"Roast your dating profile bio",        hint:"40 words to make a stranger want to meet you. Most people use them to say they like travel." },
+  { prompt:"Roast your Twitter/X bio",             hint:"One line that should make someone want to follow you. Most people make it a CV." },
+  { prompt:"Roast your portfolio intro",           hint:"Your first impression to any client or employer who lands on your site." },
+  { prompt:"Roast your business pitch",            hint:"The 2-sentence version you use when someone asks what you do." },
+  { prompt:"Roast your personal website headline", hint:"The first thing anyone reads. Most headlines are forgettable by design." },
+  { prompt:"Roast your conference speaker bio",    hint:"Written by you, read by everyone, embarrassing to nobody but yourself." },
+  { prompt:"Roast your email signature",           hint:"The last thing people see. Usually the least thought-out thing you've written." },
+  { prompt:"Roast your Slack status or intro",     hint:"The text your team reads every day and you wrote once in 2022." },
+  { prompt:"Roast your newsletter subject line",   hint:"The difference between opened and ignored is usually this one line." },
+  { prompt:"Roast your product tagline",           hint:"One line that should sell your idea. Most taglines describe it instead." },
+  { prompt:"Roast your personal mission statement",hint:"The sentence that's supposed to define your direction. Usually doesn't." },
+  { prompt:"Roast your cover letter opening",      hint:"The paragraph that should make you memorable. Most openers are identical." },
+  { prompt:"Roast your meetup or event bio",       hint:"What people read before deciding whether to attend your talk." },
+  { prompt:"Roast your Airbnb host description",   hint:"What makes strangers trust you with their holiday." },
+  { prompt:"Roast your podcast description",       hint:"The text that convinces someone to listen to your show instead of anyone else's." },
+];
+
+function getWeekNum() {
+  return Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+}
+
+function getCurrentChallenge() {
+  return CHALLENGE_LIST[getWeekNum() % CHALLENGE_LIST.length];
+}
+
+function getChallengeState() {
+  const data = getStoredData();
+  const weekNum = getWeekNum();
+  if (!data?.challengeWeek || data.challengeWeek !== weekNum) {
+    return { started: false, completed: false, weekNum };
+  }
+  return { started: data.challengeStarted || false, completed: data.challengeCompleted || false, weekNum };
+}
+
+function markChallengeStarted() {
+  const data = getStoredData() || {};
+  saveData({ ...data, challengeWeek: getWeekNum(), challengeStarted: true });
+}
+
+function markChallengeCompleted() {
+  const data = getStoredData() || {};
+  saveData({ ...data, challengeWeek: getWeekNum(), challengeStarted: true, challengeCompleted: true });
+}
+
 function saveToHistory(roast) {
   // Guard: only save if there's meaningful data in localStorage (user is active)
   // This prevents writing history for a signed-out user due to race conditions
@@ -169,6 +220,146 @@ function formatBillingDate(date) {
   return date.toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
 }
 
+
+// ─── Global Bottom Navigation ───────────────────────────
+function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
+  const tabs = [
+    {
+      id: "app",
+      label: "Roast",
+      screens: ["app", "loading", "result"],
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+        </svg>
+      )
+    },
+    {
+      id: "history",
+      label: "History",
+      screens: ["history", "battle-history"],
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      )
+    },
+    {
+      id: "battle-hub",
+      label: "Battle",
+      screens: ["battle-hub", "battle-intro", "battle-result"],
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+          <path d="M13 19l6-6"/>
+          <path d="M16 16l4 4"/>
+          <path d="M19 21l2-2"/>
+          <path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/>
+          <path d="M5 14l4 4"/>
+          <path d="M7 17l-3 3"/>
+          <path d="M3 19l2 2"/>
+        </svg>
+      )
+    },
+    {
+      id: "profile",
+      label: "Account",
+      screens: ["profile", "help", "about", "privacy", "terms"],
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#FF4500" : c.text2} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      )
+    },
+  ];
+
+  const HIDDEN_SCREENS = ["landing", "onboarding", "loading", "challenge-expired", "halloffame", "battle-intro", "battle-result"];
+  if (HIDDEN_SCREENS.includes(screen)) return null;
+
+  return (
+    <nav style={{
+      position: "fixed",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      background: dark ? "rgba(10,10,10,0.96)" : "rgba(250,250,250,0.96)",
+      backdropFilter: "blur(20px)",
+      borderTop: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+      display: "flex",
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+    }}>
+      {tabs.map(tab => {
+        const active = tab.screens.includes(screen) || screen === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setScreen(tab.id)}
+            style={{
+              flex: 1,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "10px 4px 8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "4px",
+              position: "relative",
+              transition: "opacity 0.15s",
+            }}
+          >
+            {tab.icon(active)}
+            <span style={{
+              fontSize: "10px",
+              fontWeight: active ? 700 : 500,
+              color: active ? "#FF4500" : c.text2,
+              letterSpacing: "0.3px",
+              transition: "color 0.15s",
+            }}>
+              {tab.label}
+            </span>
+            {active && (
+              <div style={{
+                position: "absolute",
+                top: 0,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "24px",
+                height: "2px",
+                background: "#FF4500",
+                borderRadius: "0 0 2px 2px",
+              }}/>
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px", textAlign:"center", fontFamily:"-apple-system, sans-serif", background:"#0A0A0A", color:"#fff"}}>
+        <div style={{fontSize:"48px", marginBottom:"16px"}}>🔥</div>
+        <div style={{fontSize:"22px", fontWeight:900, marginBottom:"8px"}}>Something went wrong</div>
+        <div style={{fontSize:"14px", color:"#888", marginBottom:"24px"}}>The roast machine hit an unexpected error.</div>
+        <button onClick={() => window.location.reload()} style={{padding:"12px 28px", borderRadius:"12px", background:"#FF4500", color:"#fff", fontWeight:700, fontSize:"15px", border:"none", cursor:"pointer"}}>
+          Reload App
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [dark, setDark] = useState(() => { const d = getStoredData(); return d?.darkMode !== undefined ? d.darkMode : true; });
   const [screen, setScreen] = useState("landing");
@@ -193,6 +384,7 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [challengeState, setChallengeState] = useState(() => getChallengeState());
   const [showOnboarding, setShowOnboarding] = useState(() => {
     const data = getStoredData();
     return !data?.onboardingDone;
@@ -200,6 +392,9 @@ export default function App() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
   const [intensity, setIntensity] = useState("savage");
   const [battleHistory, setBattleHistory] = useState(getBattleHistory());
   const canvasRef = useRef(null);
@@ -273,6 +468,8 @@ export default function App() {
     setShowCancelConfirm(false);
     setShowDeleteConfirm(false);
     setShowLogoutConfirm(false);
+    setDisplayName("");
+    setEditingName(false);
     setBattleOpponent(null);
     setBattleResult(null);
     setScreen("landing");
@@ -439,6 +636,7 @@ export default function App() {
           const effectivePlan = getEffectivePlan(profile);
           setPlanState(effectivePlan);
           savePlan(effectivePlan);
+          if (profile.display_name) setDisplayName(profile.display_name);
           await runMigrationIfNeeded(profile);
         }
       }
@@ -455,6 +653,7 @@ export default function App() {
           const effectivePlan = getEffectivePlan(profile);
           setPlanState(effectivePlan);
           savePlan(effectivePlan);
+          if (profile.display_name) setDisplayName(profile.display_name);
           await runMigrationIfNeeded(profile);
         }
       } else {
@@ -463,6 +662,27 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Set meta tags for social sharing
+  useEffect(() => {
+    document.title = "RoastMe AI — Get Brutally Honest Feedback";
+    const setMeta = (name, content, prop=false) => {
+      const attr = prop ? "property" : "name";
+      let el = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.setAttribute(attr, name); document.head.appendChild(el); }
+      el.setAttribute("content", content);
+    };
+    setMeta("description", "The only AI that tells you the brutal truth. Get honest feedback on your bio, CV, captions, and messages. No sugarcoating.");
+    setMeta("og:title", "RoastMe AI — Brutally Honest Feedback", true);
+    setMeta("og:description", "Paste your bio, CV, or caption and get a ruthless AI roast. Improve everything.", true);
+    setMeta("og:type", "website", true);
+    setMeta("og:url", "https://roastme-ai26.vercel.app", true);
+    setMeta("og:image", "https://roastme-ai26.vercel.app/og-image.svg", true);
+    setMeta("twitter:card", "summary_large_image");
+    setMeta("twitter:title", "RoastMe AI — Brutally Honest Feedback");
+    setMeta("twitter:description", "The AI that tells you the brutal truth about your bio, CV, and captions.");
+    setMeta("twitter:image", "https://roastme-ai26.vercel.app/og-image.svg");
   }, []);
 
   // Load Hall of Fame roast or Battle challenge from URL
@@ -500,12 +720,17 @@ export default function App() {
             setInputType(data.challenge.inputType || "✨ Anything");
             setMode(data.challenge.mode || "Savage");
             setScreen("battle-intro");
+          } else if (data.error === "Challenge has expired") {
+            window.history.replaceState({}, "", window.location.pathname);
+            setScreen("challenge-expired");
           } else {
-            // Challenge expired or not found — go to landing
+            // Not found or other error
             window.history.replaceState({}, "", window.location.pathname);
           }
         })
-        .catch(() => window.history.replaceState({}, "", window.location.pathname));
+        .catch(() => {
+          window.history.replaceState({}, "", window.location.pathname);
+        });
     } else if (battleParam) {
       // Legacy JSON battle link — parse and use as before
       try {
@@ -601,6 +826,12 @@ export default function App() {
       if (!parsed || typeof parsed.score === "undefined") throw new Error("Invalid response from AI");
       parsed.mode = mode;
       parsed.input = imageData ? "📷 Image upload" : text.slice(0, 60) + (text.length > 60 ? "..." : "");
+      // Mark weekly challenge completed if this roast was the challenge
+      const currentChallenge = getCurrentChallenge();
+      if (text.toLowerCase().startsWith(currentChallenge.prompt.toLowerCase().replace("roast your ", "").slice(0, 10).toLowerCase())) {
+        markChallengeCompleted();
+        setChallengeState(getChallengeState());
+      }
       setResult(parsed);
 
       // 1. Save locally (always, immediate)
@@ -952,7 +1183,7 @@ export default function App() {
   const scoreColor = (s) => s <= 3 ? "#FF4500" : s <= 6 ? "#FFB300" : "#22C55E";
 
   const styles = {
-    app: { minHeight:"100vh", background:c.bg, color:c.text, fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif", transition:"all 0.3s ease" },
+    app: { minHeight:"100vh", background:c.bg, color:c.text, fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif", transition:"all 0.3s ease", animation:"fadeIn 0.2s ease-out" },
     header: { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:`1px solid ${c.border}`, position:"sticky", top:0, background:c.bg, zIndex:100, backdropFilter:"blur(10px)" },
     logo: { display:"flex", alignItems:"center", gap:"3px", cursor:"pointer" },
     logoText: { fontSize:"20px", fontWeight:900, letterSpacing:"-0.5px", color:c.text },
@@ -972,6 +1203,18 @@ export default function App() {
   };
 
   // LANDING
+  // CHALLENGE EXPIRED
+  if (screen === "challenge-expired") return (
+    <div style={{...styles.app, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", padding:"20px", textAlign:"center"}}>
+      <div style={{width:"64px", height:"64px", borderRadius:"50%", background:"#FF450015", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px"}}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div style={{fontSize:"22px", fontWeight:900, color:c.text, marginBottom:"8px"}}>Challenge Expired</div>
+      <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"28px", maxWidth:"300px"}}>This challenge link has expired. Challenge links are valid for 7 days.</div>
+      <button onClick={() => setScreen("app")} style={{...styles.btn, padding:"14px 28px", fontSize:"15px"}}>Start Your Own Roast</button>
+    </div>
+  );
+
   // ONBOARDING — shown once to new users
   if (showOnboarding) return (
     <div style={{...styles.app, display:"flex", flexDirection:"column", minHeight:"100vh"}}>
@@ -1072,10 +1315,19 @@ export default function App() {
           ))}
         </div>
 
-        <div style={{...styles.card, marginTop:"20px", textAlign:"left"}}>
-          <div style={{fontSize:"12px", color:c.accent, fontWeight:700, marginBottom:"8px"}}>EXAMPLE ROAST</div>
-          <div style={{fontSize:"13px", color:c.text2, fontStyle:"italic", lineHeight:1.6}}>
-            "You listed 'Microsoft Word' as a skill in 2026. Your cat walks across the keyboard and produces better content. Score: 2/10."
+        <div style={{...styles.card, marginTop:"20px", textAlign:"left", border:`1px solid ${c.accent}30`}}>
+          <div style={{display:"flex", alignItems:"center", gap:"8px", marginBottom:"12px"}}>
+            <div style={{fontSize:"11px", color:c.accent, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px"}}>Live Example — Savage Mode</div>
+            <div style={{fontSize:"11px", color:c.text2, background:c.bg3, borderRadius:"6px", padding:"2px 8px"}}>CV Roast</div>
+          </div>
+          <div style={{fontSize:"13px", color:c.text2, fontStyle:"italic", lineHeight:1.6, marginBottom:"12px", padding:"10px", background:c.bg3, borderRadius:"8px", borderLeft:`3px solid ${c.accent}`}}>
+            "You listed 'Microsoft Word' as a skill in 2026. Your cat walks across the keyboard and produces better content. You have 11 years of experience at the same company, which either means you are irreplaceable or they forgot you were there."
+          </div>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+            <div style={{fontSize:"28px", fontWeight:900, color:"#FF4500"}}>2<span style={{fontSize:"16px", color:c.text2}}>/10</span></div>
+            <button onClick={() => setScreen("app")} style={{...styles.btn, padding:"10px 20px", fontSize:"14px"}}>
+              Try it on yours →
+            </button>
           </div>
         </div>
       </div>
@@ -1126,7 +1378,7 @@ export default function App() {
       <button onClick={() => { setScreen("app"); setLoading(false); }} style={{marginTop:"32px", background:"none", border:`1px solid ${c.border}`, borderRadius:"8px", color:c.text2, fontSize:"13px", cursor:"pointer", padding:"8px 20px"}}>
         Cancel
       </button>
-      <style>{`@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}`}</style>
+      <style>{`@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}} @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 
@@ -1155,7 +1407,90 @@ export default function App() {
           <div style={{marginTop:"16px", fontSize:"15px", color:c.text2, fontStyle:"italic", lineHeight:1.5}}>
             "{result.verdict}"
           </div>
+
+          {/* B3.3 — Result Memory: personal records */}
+          {(() => {
+            const prevAll   = history.filter(h => h.score > 0).map(h => h.score);
+            const prevMode  = history.filter(h => h.mode === result.mode && h.score > 0).map(h => h.score);
+            const now       = new Date();
+            const prevMonth = history.filter(h => { const d = new Date(h.date||h.created_at); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear() && h.score > 0; }).map(h=>h.score);
+
+            const isNewBest       = prevAll.length > 0 && result.score > Math.max(...prevAll);
+            const isNewModeBest   = prevMode.length > 0 && result.score > Math.max(...prevMode);
+            const isNewMonthBest  = prevMonth.length > 0 && result.score > Math.max(...prevMonth);
+
+            if (isNewBest) return (
+              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
+                <span style={{fontSize:"16px"}}>✦</span>
+                <span style={{fontSize:"13px", fontWeight:700, color:c.accent}}>New Personal Best</span>
+                <span style={{fontSize:"16px"}}>✦</span>
+              </div>
+            );
+            if (isNewModeBest) return (
+              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
+                <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>Best {result.mode} Result Yet</span>
+              </div>
+            );
+            if (isNewMonthBest && prevMonth.length >= 2) return (
+              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
+                <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>Best Result This Month</span>
+              </div>
+            );
+            return null;
+          })()}
         </div>
+
+        {/* B2.8 — Result contextual line */}
+        {(() => {
+          const prevScores = history.filter(h => h.score > 0).map(h => h.score);
+          if (prevScores.length < 2) return null;
+          const avg = Math.round(prevScores.reduce((a,b)=>a+b,0) / prevScores.length * 10) / 10;
+          const diff = result.score - avg;
+
+          // Check if it's the best score in last 14 days
+          const fourteenDaysAgo = Date.now() - 14*24*60*60*1000;
+          const recent14 = history.filter(h => {
+            const d = new Date(h.date || h.created_at);
+            return !isNaN(d) && d.getTime() > fourteenDaysAgo && h.score > 0;
+          }).map(h => h.score);
+          const bestIn14 = recent14.length > 0 && result.score >= Math.max(...recent14);
+
+          // Check if it's one of best this month
+          const now = new Date();
+          const thisMonthScores = history.filter(h => {
+            const d = new Date(h.date || h.created_at);
+            return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && h.score > 0;
+          }).map(h => h.score);
+          const isTopThisMonth = thisMonthScores.length >= 3 && result.score >= Math.max(...thisMonthScores);
+
+          let label, color;
+          if (isTopThisMonth) {
+            label = "One of your strongest results this month"; color = "#22C55E";
+          } else if (bestIn14 && recent14.length >= 3) {
+            label = "Your best score in the last 14 days"; color = "#22C55E";
+          } else if (diff > 1.5) {
+            label = "Strong improvement detected"; color = "#22C55E";
+          } else if (diff > 0.4) {
+            label = `Above your recent average · ${avg}/10`; color = "#22C55E";
+          } else if (diff < -0.4) {
+            label = `Below your recent average · ${avg}/10`; color = "#FF4500";
+          } else {
+            label = `Matches your average · ${avg}/10`; color = "#FFB300";
+          }
+
+          return (
+            <div style={{display:"flex", alignItems:"center", gap:"7px", marginBottom:"14px", padding:"9px 14px", background:`${color}10`, border:`1px solid ${color}25`, borderRadius:"10px"}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {color === "#22C55E"
+                  ? (<><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>)
+                  : color === "#FF4500"
+                  ? (<><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>)
+                  : (<line x1="5" y1="12" x2="19" y2="12"/>)}
+              </svg>
+              <span style={{fontSize:"12px", fontWeight:600, color}}>{label}</span>
+            </div>
+          );
+        })()}
 
         {/* One-liner */}
         <div style={{...styles.card, marginBottom:"16px", background:`${c.accent}12`, border:`1px solid ${c.accent}40`}}>
@@ -1240,29 +1575,56 @@ export default function App() {
           )
         )}
 
-        {/* Action buttons — max 3, clear hierarchy */}
+        {/* FREE PLAN: roasts remaining bar */}
+        {!isPaid && (
+          <div style={{marginBottom:"20px"}}>
+            <div style={{display:"flex", justifyContent:"space-between", fontSize:"12px", color:c.text2, marginBottom:"6px"}}>
+              <span>{ROAST_WEEKLY_LIMIT - roastsUsed} of {ROAST_WEEKLY_LIMIT} roasts left this week</span>
+              <button onClick={() => setShowPaywall(true)} style={{background:"none", border:"none", color:c.accent, fontSize:"12px", fontWeight:700, cursor:"pointer", padding:0}}>Upgrade</button>
+            </div>
+            <div style={{height:"3px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
+              <div style={{height:"100%", width:`${((ROAST_WEEKLY_LIMIT - roastsUsed) / ROAST_WEEKLY_LIMIT) * 100}%`, background:"#FF4500", borderRadius:"2px", transition:"width 0.5s"}}/>
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons — 3 max, clear hierarchy */}
         <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"32px"}}>
-          {/* Primary action */}
-          <button style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={shareRoast}>
+          {/* PRIMARY: Share */}
+          <button style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", fontSize:"16px", padding:"17px"}} onClick={shareRoast}>
             {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
               Share My Roast
             </>)}
           </button>
 
-          {/* Secondary actions side by side */}
+          {/* SECONDARY: Roast Again + Challenge side by side */}
           <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px"}}>
-            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"14px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
               Roast Again
             </button>
-            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"14px"}} onClick={() => setScreen("history")}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              My History
+            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px", background:`${c.accent}15`, borderColor:`${c.accent}40`, color:c.accent}} onClick={async () => {
+              // Quick challenge — same as full challenge button below
+              const baseUrl = window.location.href.split('?')[0];
+              let link;
+              if (user && result?.supabaseRoastId) {
+                try {
+                  const res = await apiCall("/api/challenges/create", { method:"POST", body:JSON.stringify({ roastId:result.supabaseRoastId, score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }) });
+                  const data = await res.json();
+                  if (data.challengeId) link = `${baseUrl}?challenge=${data.challengeId}`;
+                } catch(e) {}
+              }
+              if (!link) link = `${baseUrl}?battle=${encodeURIComponent(JSON.stringify({ score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }))}`;
+              if (navigator.share) { try { await navigator.share({ title:"Can you beat my RoastMe score?", url:link }); } catch(e) { await navigator.clipboard.writeText(link); setShareMsg("Copied!"); setTimeout(()=>setShareMsg(""),2000); } }
+              else { await navigator.clipboard.writeText(link); setShareMsg("Challenge link copied!"); setTimeout(()=>setShareMsg(""),2500); }
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>
+              Challenge
             </button>
           </div>
 
-          {/* Challenge button — full width, distinct style */}
+          {/* Challenge button — full width, distinct style — REMOVED: merged above */}
           <button style={{width:"100%", padding:"14px", borderRadius:"14px", border:"none", cursor:"pointer", fontSize:"14px", fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #FF4500, #B91C1C)", boxShadow:"0 4px 16px rgba(255,69,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={async () => {
             const baseUrl = window.location.href.split('?')[0];
             let link;
@@ -1458,307 +1820,204 @@ export default function App() {
             </svg>
             Challenge a Friend to Beat This
           </button>
-
-          {/* Hall of Fame — subtle link, not a full button */}
-          {plan === "brutal" ? (
-            <button onClick={() => {
-              const roastData = encodeURIComponent(JSON.stringify({ score: result?.score, oneliner: result?.oneliner, mode: result?.mode, verdict: result?.verdict }));
-              const link = `${window.location.href.split('?')[0]}?roast=${roastData}`;
-              navigator.clipboard.writeText(link);
-              setShareMsg("Hall of Fame link copied!");
-              setTimeout(() => setShareMsg(""), 3000);
-            }} style={{background:"none", border:"none", cursor:"pointer", fontSize:"12px", color:c.text2, padding:"4px 0", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", width:"100%", marginTop:"4px"}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>
-              Copy Hall of Fame Link
-            </button>
-          ) : (
-            <button onClick={() => setShowPaywall(true)} style={{background:"none", border:"none", cursor:"pointer", fontSize:"12px", color:c.text2, padding:"4px 0", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", width:"100%", marginTop:"4px"}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Hall of Fame Link — Brutal only
-            </button>
-          )}
         </div>
 
-        {!isPaid && (
-          <div style={{...styles.card, textAlign:"center", border:`1px solid ${c.accent}40`, background:`${c.accent}08`}}>
-            <div style={{fontSize:"14px", fontWeight:700, marginBottom:"8px"}}>
-              {ROAST_WEEKLY_LIMIT - roastsUsed} roasts left this week
-            </div>
-            <div style={{fontSize:"13px", color:c.text2, marginBottom:"12px"}}>Upgrade for unlimited roasts + clean shareable cards</div>
-            <button style={{...styles.btn, padding:"12px 24px", fontSize:"14px"}} onClick={() => setShowPaywall(true)}>
-              Upgrade Now
-            </button>
-          </div>
-        )}
       </div>
 
       {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
-  // PROFILE
+  // PROFILE — Premium Account Page
   if (screen === "profile") {
     const billingDate = getBillingDate(plan);
     const billingStr = formatBillingDate(billingDate);
+    const avgScore = history.length > 0
+      ? Math.round(history.reduce((a,b) => a + (b.score||0), 0) / history.length * 10) / 10
+      : null;
+    const trend = history.length >= 3
+      ? (history[0].score > history[history.length-1].score ? "↑ Improving" : history[0].score < history[history.length-1].score ? "↓ Dropped" : "→ Steady")
+      : null;
+
+    const SECTION = ({ label, children, last }) => (
+      <div style={{marginBottom: last ? 0 : "8px"}}>
+        <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", padding:"16px 20px 8px"}}>{label}</div>
+        <div style={{background:c.bg2, borderRadius:"16px", border:`1px solid ${c.border}`, overflow:"hidden"}}>{children}</div>
+      </div>
+    );
+
+    const ROW = ({ icon, label, sub, right, onClick, last, danger }) => (
+      <div onClick={onClick} style={{display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", borderBottom: last ? "none" : `1px solid ${c.border}`, cursor: onClick ? "pointer" : "default", background:"none"}}>
+        <div style={{width:"34px", height:"34px", borderRadius:"10px", background: danger ? "#FF450018" : `${c.accent}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+          {icon}
+        </div>
+        <div style={{flex:1, minWidth:0}}>
+          <div style={{fontSize:"15px", fontWeight:600, color: danger ? "#FF4500" : c.text}}>{label}</div>
+          {sub && <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>{sub}</div>}
+        </div>
+        {right}
+        {onClick && !right && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
+      </div>
+    );
 
     return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
-          <button style={{...styles.btnOutline, padding:"8px 12px"}} onClick={() => setScreen("app")}><span style={{display:"flex", alignItems:"center", gap:"4px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</span></button>
-          <span style={{fontWeight:800, fontSize:"18px"}}>My Account</span>
-        </div>
-        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
-      </header>
-
-      <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px"}}>
-
-        {/* User info */}
-        <div style={{...styles.card, marginBottom:"16px", display:"flex", alignItems:"center", gap:"14px"}}>
-          <div style={{width:"52px", height:"52px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div style={{flex:1, minWidth:0}}>
-            <div style={{fontWeight:800, fontSize:"16px", color:c.text}}>
-              {user ? user.email?.split("@")[0] : "Guest User"}
+    <div style={{...styles.app, paddingBottom:"80px"}}>
+      {/* Hero identity area */}
+      <div style={{padding:"28px 20px 20px", background: dark ? "linear-gradient(180deg, #111 0%, #0A0A0A 100%)" : "linear-gradient(180deg, #F5F5F5 0%, #FAFAFA 100%)", borderBottom:`1px solid ${c.border}`}}>
+        <div style={{maxWidth:"480px", margin:"0 auto", display:"flex", alignItems:"center", gap:"16px"}}>
+          {/* Avatar */}
+          <div style={{position:"relative", flexShrink:0}}>
+            <div style={{width:"72px", height:"72px", borderRadius:"50%", background:`${c.accent}20`, border:`2.5px solid ${c.accent}50`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"28px", fontWeight:900, color:c.accent}}>
+              {user ? (displayName?.[0] || user.email?.[0] || "?").toUpperCase()
+                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
             </div>
-            <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>
-              {user ? user.email : "Not signed in — data saved locally"}
-            </div>
-          </div>
-          {user ? (
-            <button onClick={() => setShowLogoutConfirm(true)} style={{background:"none", border:`1px solid ${c.border}`, borderRadius:"8px", padding:"6px 12px", color:c.text2, fontSize:"12px", fontWeight:600, cursor:"pointer", flexShrink:0}}>
-              Sign Out
-            </button>
-          ) : (
-            <button onClick={() => setShowLogin(true)} style={{background:c.accent, border:"none", borderRadius:"8px", padding:"6px 12px", color:"#fff", fontSize:"12px", fontWeight:700, cursor:"pointer", flexShrink:0}}>
-              Sign In
-            </button>
-          )}
-        </div>
-
-        {/* Current Plan */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px"}}>
-            <div style={{fontSize:"11px", color:c.accent, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px"}}>MY PLAN</div>
-            <button onClick={() => setShowPaywall(true)} style={{background:"none", border:"none", cursor:"pointer", fontSize:"11px", color:c.text2, fontWeight:700, textDecoration:"underline"}}>
-              All Plans →
-            </button>
-          </div>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px"}}>
-            <div>
-              <div style={{fontSize:"20px", fontWeight:900, color:c.text}}>
-                {plan === "free" ? "Free" : plan === "fired_up" ? "Fired Up" : "Brutal"}
-              </div>
-              <div style={{fontSize:"13px", color:c.text2, marginTop:"4px"}}>
-                {plan === "free" ? "5 roasts per week" : plan === "fired_up" ? "$2.99/month" : "$5.99/month"}
-              </div>
-            </div>
-            {plan !== "free" && billingStr && (
-              <div style={{fontSize:"12px", color:c.text2, textAlign:"right"}}>
-                <div>Next billing</div>
-                <div style={{fontWeight:600, color:c.text}}>{billingStr}</div>
+            {isPaid && (
+              <div style={{position:"absolute", bottom:"-1px", right:"-1px", background: plan==="brutal" ? "#FF4500" : "#FFB300", borderRadius:"8px", padding:"2px 6px", fontSize:"9px", fontWeight:900, color:"#fff", border:`2px solid ${dark?"#111":"#F5F5F5"}`, whiteSpace:"nowrap"}}>
+                {plan==="brutal" ? "BRUTAL" : "FIRED UP"}
               </div>
             )}
           </div>
 
-          {plan === "free" && (
-            <button style={{...styles.btn, width:"100%", marginBottom:"8px", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px"}} onClick={() => setShowPaywall(true)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Upgrade Plan
-            </button>
-          )}
-          {plan === "fired_up" && (
-            <button style={{...styles.btn, width:"100%", marginBottom:"8px", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={() => handleUpgrade("brutal")}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              Upgrade to Brutal — $5.99/month
-            </button>
-          )}
-
-          {plan !== "free" && !showCancelConfirm && (
-            <button onClick={() => setShowCancelConfirm(true)} style={{width:"100%", background:"none", border:"none", color:c.text2, fontSize:"13px", cursor:"pointer", padding:"8px"}}>
-              Cancel Plan
-            </button>
-          )}
-
-          {showCancelConfirm && (
-            <div style={{background:c.bg3, border:`1px solid ${c.border}`, borderRadius:"12px", padding:"16px", marginTop:"8px"}}>
-              <div style={{display:"flex", alignItems:"center", gap:"7px", fontSize:"15px", fontWeight:800, color:c.text, marginBottom:"6px"}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                Before you cancel...
-              </div>
-              <div style={{fontSize:"13px", color:c.text2, marginBottom:"16px"}}>Choose what works best for you:</div>
-
-              {plan === "brutal" && (
-                <button onClick={() => { handleUpgrade("fired_up"); setShowCancelConfirm(false); }} style={{width:"100%", padding:"14px", borderRadius:"12px", background:`${c.accent}15`, border:`1px solid ${c.accent}40`, color:c.text, fontWeight:700, cursor:"pointer", fontSize:"14px", marginBottom:"10px", textAlign:"left"}}>
-                  <div style={{color:c.accent, fontWeight:800, marginBottom:"4px"}}>Switch to Fired Up — $2.99/mo</div>
-                  <div style={{fontSize:"12px", color:c.text2, fontWeight:400}}>Keep unlimited roasts at a lower price</div>
-                </button>
-              )}
-
-              <button onClick={() => { handleOpenPortal(); setShowCancelConfirm(false); }} style={{width:"100%", padding:"14px", borderRadius:"12px", background:"transparent", border:`1px solid ${c.border}`, color:c.text2, fontWeight:600, cursor:"pointer", fontSize:"13px", marginBottom:"10px", textAlign:"left"}}>
-                <div style={{fontWeight:700, marginBottom:"4px"}}>Manage in Billing Portal</div>
-                <div style={{fontSize:"12px"}}>Cancel, update payment, view invoices</div>
-              </button>
-
-              <button onClick={() => setShowCancelConfirm(false)} style={{width:"100%", padding:"12px", borderRadius:"12px", background:"#FF4500", border:"none", color:"#fff", fontWeight:800, cursor:"pointer", fontSize:"14px"}}>
-                Keep {plan === "brutal" ? "Brutal" : "Fired Up"} — I'm staying!
-              </button>
-            </div>
-          )}
+          {/* Name + email */}
+          <div style={{flex:1, minWidth:0}}>
+            {user ? (
+              <>
+                {editingName ? (
+                  <div style={{display:"flex", gap:"8px", alignItems:"center", marginBottom:"4px"}}>
+                    <input value={nameInput} onChange={e => setNameInput(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key === "Enter") { if (nameInput.trim()) { setDisplayName(nameInput.trim()); await supabase.from("profiles").update({ display_name: nameInput.trim() }).eq("id", user.id); } setEditingName(false); }
+                        if (e.key === "Escape") setEditingName(false);
+                      }} autoFocus placeholder="Your name..."
+                      style={{flex:1, padding:"8px 12px", borderRadius:"10px", border:`1.5px solid ${c.accent}`, background:c.bg3, color:c.text, fontSize:"16px", fontWeight:700, outline:"none", fontFamily:"inherit"}}/>
+                    <button onClick={async () => { if (nameInput.trim()) { setDisplayName(nameInput.trim()); await supabase.from("profiles").update({ display_name: nameInput.trim() }).eq("id", user.id); } setEditingName(false); }}
+                      style={{padding:"8px 14px", borderRadius:"10px", background:c.accent, color:"#fff", border:"none", fontWeight:700, fontSize:"14px", cursor:"pointer", whiteSpace:"nowrap"}}>Save</button>
+                  </div>
+                ) : (
+                  <div style={{display:"flex", alignItems:"center", gap:"8px", marginBottom:"3px"}}>
+                    <div style={{fontWeight:800, fontSize:"20px", color:c.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                      {displayName || user.email?.split("@")[0] || "User"}
+                    </div>
+                    <button onClick={() => { setNameInput(displayName || user.email?.split("@")[0] || ""); setEditingName(true); }}
+                      style={{background:"none", border:"none", cursor:"pointer", padding:"3px", color:c.text2, flexShrink:0}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  </div>
+                )}
+                <div style={{fontSize:"13px", color:c.text2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{user.email}</div>
+                <div style={{fontSize:"11px", color:c.text2, marginTop:"3px", opacity:0.6}}>
+                  Member since {user.created_at ? new Date(user.created_at).toLocaleDateString("en-GB", {month:"long", year:"numeric"}) : "today"}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{fontWeight:800, fontSize:"18px", color:c.text, marginBottom:"4px"}}>Guest</div>
+                <div style={{fontSize:"13px", color:c.text2, marginBottom:"12px"}}>Sign in to sync your data across devices</div>
+                <button onClick={() => setShowLogin(true)} style={{...styles.btn, padding:"10px 20px", fontSize:"14px"}}>Sign In</button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Stats */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>MY STATS</div>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"10px"}}>
+        {/* Stats strip — only when logged in and has data */}
+        {user && history.length > 0 && (
+          <div style={{maxWidth:"480px", margin:"16px auto 0", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px"}}>
             {[
-              { value:history.length, label:"Total Roasts" },
-              { value: history.length > 0 ? Math.round(history.reduce((a,b) => a + (b.score||0), 0) / history.length * 10) / 10 : 0, label:"Avg Score" },
-              { value: history.length >= 2 ? (history[0].score > history[history.length-1].score ? "↑" : history[0].score < history[history.length-1].score ? "↓" : "→") : "—", label:"Trend",
-                color: history.length >= 2 ? (history[0].score > history[history.length-1].score ? "#22C55E" : history[0].score < history[history.length-1].score ? "#FF4500" : "#FFB300") : c.text2 },
+              { val: history.length, label: "Roasts" },
+              { val: avgScore ? `${avgScore}/10` : "—", label: "Avg Score" },
+              { val: battleHistory.filter(b=>b.result==="win").length, label: "Wins" },
             ].map((s,i) => (
-              <div key={i} style={{textAlign:"center", padding:"14px 8px", background:c.bg3, borderRadius:"12px"}}>
-                <div style={{fontSize:"24px", fontWeight:900, color:s.color || c.accent}}>{s.value}</div>
-                <div style={{fontSize:"11px", color:c.text2, marginTop:"4px"}}>{s.label}</div>
+              <div key={i} style={{textAlign:"center", padding:"10px 6px", background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", borderRadius:"12px"}}>
+                <div style={{fontSize:"20px", fontWeight:900, color:c.accent}}>{s.val}</div>
+                <div style={{fontSize:"11px", color:c.text2, marginTop:"2px"}}>{s.label}</div>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Weekly Summary — Fired Up and Brutal */}
-        {isPaid && history.length > 0 && (
-          <div style={{...styles.card, marginBottom:"16px", border:`1px solid ${c.accent}40`, background:`${c.accent}08`}}>
-            <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              {plan === "brutal" ? "Weekly Roast Report" : "Weekly Summary"}
-            </div>
-            <div style={{fontSize:"13px", color:c.text2, lineHeight:2}}>
-              <div>• Total roasts: <strong style={{color:c.text}}>{history.length}</strong></div>
-              <div>• Average score: <strong style={{color:c.accent}}>{Math.round(history.reduce((a,b) => a + (b.score||0), 0) / history.length * 10) / 10}/10</strong></div>
-              <div>• Most used mode: <strong style={{color:c.text}}>{(() => { const ms = history.map(h=>h.mode); return ms.sort((a,b) => ms.filter(v=>v===a).length - ms.filter(v=>v===b).length).pop() || "Savage"; })()}</strong></div>
-              {isPaid && battleHistory.length > 0 && (
-                <div>• Battle record: <strong style={{color:"#22C55E"}}>{battleHistory.filter(b=>b.result==="win").length}W</strong> / <strong style={{color:"#FF4500"}}>{battleHistory.filter(b=>b.result==="loss").length}L</strong> / <strong style={{color:"#FFB300"}}>{battleHistory.filter(b=>b.result==="tie").length}T</strong></div>
-              )}
-            </div>
-          </div>
         )}
+      </div>
 
-        {/* More ways to roast */}
-        <div style={{...styles.card, marginBottom:"16px", padding:"8px"}}>
-          <div style={{fontSize:"11px", color:c.accent, fontWeight:700, margin:"8px 8px 4px", textTransform:"uppercase", letterSpacing:"1px"}}>MORE WAYS TO ROAST</div>
-          {[
-            { label:"My Roast History", sub:"View all your past roasts", d:"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", d2:"M14 2L14 8 20 8", d3:"M16 13L8 13", d4:"M16 17L8 17", badge:null, onClick:() => setScreen("history") },
-            { label:"Battle Mode", sub:"Roast, challenge friends, track wins", d:"M14.5 17.5L3 6V3h3l11.5 11.5", d2:"M13 19l6-6", d3:"M16 16l4 4", d4:"M19 21l2-2", d5:"M14.5 6.5L18 3h3v3l-3.5 3.5", d6:"M5 14l4 4", d7:"M7 17l-3 3", d8:"M3 19l2 2", badge:{text:"New", style:{color:c.accent, background:`${c.accent}18`}}, onClick:() => setScreen("battle-hub") },
-            { label:"Hall of Fame", sub:"Turn your score into a shareable link", d:"M8 21h8", d2:"M12 17v4", d3:"M7 4h10v5a5 5 0 0 1-10 0V4z", d4:"M17 5h2.5a2.5 2.5 0 0 1 0 5H17", d5:"M7 5H4.5a2.5 2.5 0 0 0 0 5H7", badge: plan !== "brutal" ? {text:"Brutal only", lockIcon:true, style:{color:c.text2, background:c.bg3}} : null, onClick:() => setScreen("halloffame-hub") },
-          ].map((item,i,arr) => (
-            <button key={item.label} onClick={item.onClick} style={{display:"flex", alignItems:"center", gap:"12px", width:"100%", background:"none", border:"none", borderBottom: i < arr.length-1 ? `1px solid ${c.border}` : "none", color:c.text, cursor:"pointer", padding:"12px 8px", textAlign:"left"}}>
-              <div style={{width:"40px", height:"40px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {item.d && <path d={item.d}/>}{item.d2 && <path d={item.d2}/>}{item.d3 && <path d={item.d3}/>}{item.d4 && <path d={item.d4}/>}{item.d5 && <path d={item.d5}/>}{item.d6 && <path d={item.d6}/>}{item.d7 && <path d={item.d7}/>}{item.d8 && <path d={item.d8}/>}
-                </svg>
-              </div>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontWeight:700, fontSize:"15px", color:c.text}}>{item.label}</div>
-                <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>{item.sub}</div>
-              </div>
-              {item.badge && (
-                <span style={{display:"flex", alignItems:"center", gap:"4px", fontSize:"10px", fontWeight:700, borderRadius:"20px", padding:"4px 9px", flexShrink:0, ...item.badge.style}}>
-                  {item.badge.lockIcon && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
-                  {item.badge.text}
-                </span>
+      {/* Sections */}
+      <div style={{maxWidth:"480px", margin:"0 auto", padding:"16px 16px 32px"}}>
+
+        {/* PLAN */}
+        <SECTION label="Plan">
+          <ROW
+            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}
+            label={plan === "free" ? "Free Plan" : plan === "fired_up" ? "Fired Up — $2.99/mo" : "Brutal — $5.99/mo"}
+            sub={plan === "free" ? "5 roasts per week" : billingStr ? `Renews ${billingStr}` : "Active subscription"}
+            right={
+              plan === "free"
+                ? <button onClick={() => setShowPaywall(true)} style={{background:c.accent, color:"#fff", border:"none", borderRadius:"8px", padding:"7px 14px", fontSize:"12px", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap"}}>Upgrade</button>
+                : <button onClick={() => setShowCancelConfirm(true)} style={{background:"none", color:c.text2, border:`1px solid ${c.border}`, borderRadius:"8px", padding:"7px 14px", fontSize:"12px", fontWeight:600, cursor:"pointer", whiteSpace:"nowrap"}}>Manage</button>
+            }
+            last={!showCancelConfirm}
+          />
+          {showCancelConfirm && (
+            <div style={{padding:"16px", borderTop:`1px solid ${c.border}`}}>
+              <div style={{fontSize:"14px", fontWeight:700, color:c.text, marginBottom:"12px"}}>Manage your plan</div>
+              {plan === "brutal" && (
+                <button onClick={() => { handleUpgrade("fired_up"); setShowCancelConfirm(false); }} style={{width:"100%", padding:"13px", borderRadius:"12px", background:`${c.accent}15`, border:`1px solid ${c.accent}40`, color:c.text, fontWeight:700, cursor:"pointer", fontSize:"14px", marginBottom:"8px", textAlign:"left"}}>
+                  <div style={{color:c.accent, fontWeight:800}}>Switch to Fired Up — $2.99/mo</div>
+                  <div style={{fontSize:"12px", color:c.text2, fontWeight:400, marginTop:"2px"}}>Keep unlimited roasts at a lower price</div>
+                </button>
               )}
-              <span style={{color:c.text2, fontSize:"20px", flexShrink:0}}>›</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Settings */}
-        <div style={{...styles.card, marginBottom:"16px", padding:"8px"}}>
-          <div style={{fontSize:"11px", color:c.accent, fontWeight:700, margin:"8px 8px 4px", textTransform:"uppercase", letterSpacing:"1px"}}>SETTINGS</div>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 8px", borderBottom:`1px solid ${c.border}`}}>
-            <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
-              <div style={{width:"40px", height:"40px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center"}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {dark ? (
-                    <>
-                      <circle cx="12" cy="12" r="5"/>
-                      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </>
-                  ) : (
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  )}
-                </svg>
-              </div>
-              <div>
-                <div style={{fontWeight:700, fontSize:"15px", color:c.text}}>{dark ? "Dark Mode" : "Light Mode"}</div>
-                <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Toggle appearance</div>
-              </div>
-            </div>
-            <button onClick={toggleDark} style={{width:"48px", height:"28px", borderRadius:"20px", border:"none", background: dark ? c.accent : c.bg3, cursor:"pointer", position:"relative", flexShrink:0, transition:"background 0.2s"}}>
-              <div style={{position:"absolute", top:"3px", left: dark ? "23px" : "3px", width:"22px", height:"22px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}}/>
-            </button>
-          </div>
-          <button onClick={() => setScreen("help")} style={{display:"flex", alignItems:"center", gap:"12px", width:"100%", background:"none", border:"none", borderBottom:`1px solid ${c.border}`, color:c.text, cursor:"pointer", padding:"12px 8px", textAlign:"left"}}>
-            <div style={{width:"40px", height:"40px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontWeight:700, fontSize:"15px", color:c.text}}>Help & FAQ</div>
-              <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>How it works, common questions</div>
-            </div>
-            <span style={{color:c.text2, fontSize:"20px", flexShrink:0}}>›</span>
-          </button>
-          <button onClick={() => setScreen("about")} style={{display:"flex", alignItems:"center", gap:"12px", width:"100%", background:"none", border:"none", color:c.text, cursor:"pointer", padding:"12px 8px", textAlign:"left"}}>
-            <div style={{width:"40px", height:"40px", borderRadius:"50%", background:`${c.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontWeight:700, fontSize:"15px", color:c.text}}>About RoastMe AI</div>
-              <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Version, contact, legal</div>
-            </div>
-            <span style={{color:c.text2, fontSize:"20px", flexShrink:0}}>›</span>
-          </button>
-        </div>
-
-        {/* Security & Delete */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{display:"flex", alignItems:"center", gap:"12px", marginBottom:"12px"}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>
-            </svg>
-            <div>
-              <div style={{fontWeight:700, fontSize:"14px", color:c.text}}>Secure & Private</div>
-              <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Your data is never shared with third parties.</div>
-            </div>
-          </div>
-          {!showDeleteConfirm ? (
-            <button onClick={() => setShowDeleteConfirm(true)} style={{width:"100%", background:"none", border:`1px solid #FF4500`, borderRadius:"10px", color:"#FF4500", fontSize:"13px", fontWeight:600, cursor:"pointer", padding:"10px"}}>
-              Delete My Account & Data
-            </button>
-          ) : (
-            <div style={{background:"#FF450010", border:"1px solid #FF450040", borderRadius:"12px", padding:"16px"}}>
-              <div style={{fontSize:"14px", fontWeight:800, color:"#FF4500", marginBottom:"6px"}}>Are you sure?</div>
-              <div style={{fontSize:"13px", color:c.text2, marginBottom:"16px", lineHeight:1.5}}>This will permanently delete all your roast history, stats, and account data. This cannot be undone.</div>
-              <div style={{display:"flex", gap:"8px"}}>
-                <button onClick={() => {
-                  saveData({});
-                  handleSignOut();
-                }} style={{flex:1, padding:"12px", borderRadius:"10px", background:"#FF4500", border:"none", color:"#fff", fontWeight:800, cursor:"pointer", fontSize:"13px"}}>
-                  Yes, delete everything
-                </button>
-                <button onClick={() => setShowDeleteConfirm(false)} style={{flex:1, padding:"12px", borderRadius:"10px", background:c.bg3, border:"none", color:c.text, fontWeight:700, cursor:"pointer", fontSize:"13px"}}>
-                  Cancel
-                </button>
-              </div>
+              <button onClick={() => { handleOpenPortal(); setShowCancelConfirm(false); }} style={{width:"100%", padding:"13px", borderRadius:"12px", background:"transparent", border:`1px solid ${c.border}`, color:c.text2, fontWeight:600, cursor:"pointer", fontSize:"13px", marginBottom:"8px", textAlign:"left"}}>
+                <div style={{fontWeight:700, color:c.text}}>Open Billing Portal</div>
+                <div style={{fontSize:"12px", marginTop:"2px"}}>Cancel, update payment, view invoices</div>
+              </button>
+              <button onClick={() => setShowCancelConfirm(false)} style={{width:"100%", padding:"12px", borderRadius:"12px", background:c.bg3, border:"none", color:c.text, fontWeight:700, cursor:"pointer", fontSize:"14px"}}>
+                Keep {plan === "brutal" ? "Brutal" : "Fired Up"}
+              </button>
             </div>
           )}
-        </div>
+        </SECTION>
 
+        {/* PREFERENCES */}
+        <SECTION label="Preferences">
+          <ROW
+            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg>}
+            label={dark ? "Dark Mode" : "Light Mode"}
+            sub="Toggle appearance"
+            right={
+              <button onClick={toggleDark} style={{width:"46px", height:"27px", borderRadius:"20px", border:"none", background: dark ? c.accent : c.bg3, cursor:"pointer", position:"relative", flexShrink:0, transition:"background 0.2s"}}>
+                <div style={{position:"absolute", top:"2.5px", left: dark ? "21px" : "2.5px", width:"22px", height:"22px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}}/>
+              </button>
+            }
+          />
+          <ROW icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} label="Help & FAQ" sub="How it works, common questions" onClick={() => setScreen("help")}/>
+          <ROW icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>} label="About & Legal" sub="Version, privacy policy, terms" onClick={() => setScreen("about")} last/>
+        </SECTION>
+
+        {/* DATA */}
+        <SECTION label="Data">
+          <ROW
+            icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+            label="Export My Data"
+            sub="Download your history as JSON"
+            last
+            onClick={() => {
+              const blob = new Blob([JSON.stringify({ history, battleHistory, plan, email:user?.email, exportedAt:new Date().toISOString() }, null, 2)], {type:"application/json"});
+              const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "roastme-export.json"; a.click();
+            }}
+          />
+        </SECTION>
+
+        {/* DANGER ZONE */}
+        {user && (
+          <SECTION label="Account">
+            <ROW
+              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
+              label="Sign Out" sub="You can sign back in anytime" onClick={() => setShowLogoutConfirm(true)} danger
+            />
+            <ROW
+              icon={<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
+              label="Delete Account" sub="Permanently delete all your data" onClick={() => setShowDeleteConfirm(true)} danger last
+            />
+          </SECTION>
+        )}
       </div>
+
       {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
       {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
 
@@ -1779,11 +2038,37 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:200, padding:"0 0 20px"}}>
+          <div style={{background:c.bg2, borderRadius:"20px 20px 0 0", padding:"28px 24px", width:"100%", maxWidth:"480px", border:`1px solid #FF450040`}}>
+            <div style={{textAlign:"center", marginBottom:"20px"}}>
+              <div style={{fontSize:"18px", fontWeight:800, color:"#FF4500", marginBottom:"8px"}}>Delete Account?</div>
+              <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6}}>This will permanently delete your account, all your roasts, and all your data. This cannot be undone.</div>
+            </div>
+            <button onClick={async () => {
+              try {
+                await supabase.from("profiles").delete().eq("id", user.id);
+                await supabase.auth.admin?.deleteUser(user.id).catch(() => {});
+              } catch(e) {}
+              clearUserState();
+            }} style={{width:"100%", padding:"16px", borderRadius:"12px", border:"none", background:"#FF4500", color:"#fff", fontWeight:700, fontSize:"16px", cursor:"pointer", marginBottom:"10px"}}>
+              Delete Everything
+            </button>
+            <button onClick={() => setShowDeleteConfirm(false)} style={{width:"100%", padding:"16px", borderRadius:"12px", border:`1px solid ${c.border}`, background:"none", color:c.text, fontWeight:600, fontSize:"15px", cursor:"pointer"}}>
+              Keep My Account
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
-  );
+    );
   }
 
-  // HELP & FAQ
+    // HELP & FAQ
   if (screen === "help") return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -1827,6 +2112,71 @@ export default function App() {
     </div>
   );
 
+  // PRIVACY POLICY
+  if (screen === "privacy") return (
+    <div style={styles.app}>
+      <header style={styles.header}>
+        <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
+          <button style={{...styles.btnOutline, padding:"8px 12px"}} onClick={() => setScreen("about")}><span style={{display:"flex", alignItems:"center", gap:"4px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</span></button>
+          <span style={{fontWeight:800, fontSize:"18px"}}>Privacy Policy</span>
+        </div>
+        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark?(<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>):(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
+      </header>
+      <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px 20px 100px"}}>
+        <div style={{fontSize:"12px", color:c.text2, marginBottom:"24px"}}>Last updated: June 2026</div>
+        {[
+          { title:"Who We Are", body:"RoastMe AI is operated as an independent product. We are a software-as-a-service product that provides AI-generated feedback on user-submitted text. Contact: support@roastmeai.com" },
+          { title:"What We Collect", body:"When you use RoastMe AI, we collect: your email address (if you sign in), your Google account name and profile picture (if you sign in with Google), the text you submit for roasting, your roast results and history, your subscription and billing information (processed by Stripe — we never see your card number)." },
+          { title:"What We Do Not Collect", body:"We do not collect your location, contacts, device identifiers, browsing history, or any data beyond what is necessary to provide the service. We do not sell your data to third parties. Ever." },
+          { title:"How We Use Your Data", body:"We use your data exclusively to: provide and improve the RoastMe AI service, synchronise your roast history across your devices, process payments via Stripe, and send service-related emails (account confirmations, billing receipts)." },
+          { title:"Data Storage", body:"Your data is stored securely on Supabase (PostgreSQL database hosted in the EU). Payment data is handled entirely by Stripe and is never stored on our servers. We use industry-standard encryption for all data in transit and at rest." },
+          { title:"Your Rights (GDPR)", body:"If you are in the EU/EEA, you have the right to: access your data, correct inaccurate data, delete your account and all associated data (available in Account settings), export your data (available in Account settings), withdraw consent at any time." },
+          { title:"Cookies", body:"We use only functional cookies necessary for authentication and session management. We do not use advertising or tracking cookies. We do not use any third-party analytics services." },
+          { title:"Data Retention", body:"We retain your data for as long as your account is active. When you delete your account, all your personal data is permanently deleted within 30 days. Aggregated, anonymised usage statistics may be retained indefinitely." },
+          { title:"Third-Party Services", body:"We use: Supabase for database and authentication, Stripe for payment processing, Groq for AI inference (text you submit is processed by Groq's API — see groq.com/privacy), Vercel for hosting." },
+          { title:"Contact", body:"For any privacy-related questions or requests, contact us at: support@roastmeai.com. We will respond within 5 business days." },
+        ].map((section, i) => (
+          <div key={i} style={{marginBottom:"24px"}}>
+            <div style={{fontSize:"15px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{section.title}</div>
+            <div style={{fontSize:"14px", color:c.text2, lineHeight:1.7}}>{section.body}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // TERMS OF SERVICE
+  if (screen === "terms") return (
+    <div style={styles.app}>
+      <header style={styles.header}>
+        <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
+          <button style={{...styles.btnOutline, padding:"8px 12px"}} onClick={() => setScreen("about")}><span style={{display:"flex", alignItems:"center", gap:"4px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</span></button>
+          <span style={{fontWeight:800, fontSize:"18px"}}>Terms of Service</span>
+        </div>
+        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark?(<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>):(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
+      </header>
+      <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px 20px 100px"}}>
+        <div style={{fontSize:"12px", color:c.text2, marginBottom:"24px"}}>Last updated: June 2026</div>
+        {[
+          { title:"Acceptance", body:"By using RoastMe AI, you agree to these Terms of Service. If you do not agree, please do not use the service. These terms apply to all users, including free and paid accounts." },
+          { title:"The Service", body:"RoastMe AI provides AI-generated feedback on text submitted by users. The feedback is generated by large language models and is intended to be entertaining and educational. It does not constitute professional advice of any kind." },
+          { title:"User Accounts", body:"You are responsible for maintaining the security of your account. You must provide accurate information when creating an account. You may not use another person's account or share your account credentials." },
+          { title:"Acceptable Use", body:"You agree not to: submit content that is illegal, defamatory, or that infringes intellectual property rights; submit personal information of others without their consent; attempt to reverse-engineer, scrape, or abuse the service; use the service to generate content intended to harm others." },
+          { title:"Content You Submit", body:"You retain ownership of any text you submit. By submitting text, you grant RoastMe AI a limited license to process it through our AI system to generate feedback. We do not use your content to train AI models. We do not share your content with third parties except as necessary to operate the service (e.g., processing by Groq's API)." },
+          { title:"Subscriptions and Billing", body:"Paid subscriptions (Fired Up and Brutal) are billed monthly. You may cancel at any time through the Billing Portal in your account. Cancellation takes effect at the end of the current billing period. We do not offer refunds for partial periods." },
+          { title:"Disclaimer", body:"RoastMe AI is provided as-is. We make no warranties about the accuracy, completeness, or suitability of the AI-generated feedback. The service is for entertainment and educational purposes. We are not liable for any decisions made based on feedback from our service." },
+          { title:"Changes to Terms", body:"We may update these terms at any time. Continued use of the service after changes constitutes acceptance of the new terms. We will notify users of significant changes by email." },
+          { title:"Contact", body:"For questions about these terms, contact: support@roastmeai.com" },
+        ].map((section, i) => (
+          <div key={i} style={{marginBottom:"24px"}}>
+            <div style={{fontSize:"15px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{section.title}</div>
+            <div style={{fontSize:"14px", color:c.text2, lineHeight:1.7}}>{section.body}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   // ABOUT
   if (screen === "about") return (
     <div style={styles.app}>
@@ -1855,13 +2205,15 @@ export default function App() {
           {[
             { label:"Contact / Support", value:"support@roastmeai.com", href:"mailto:support@roastmeai.com" },
             { label:"App URL", value:"roastme-ai26.vercel.app", href:"https://roastme-ai26.vercel.app" },
-            { label:"Privacy Policy", value:"Coming soon", href:null },
-            { label:"Terms of Service", value:"Coming soon", href:null },
+            { label:"Privacy Policy", value:"View Policy", href:null, screen:"privacy" },
+            { label:"Terms of Service", value:"View Terms", href:null, screen:"terms" },
           ].map((link, i, arr) => (
             <div key={i} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 8px", borderBottom: i < arr.length-1 ? `1px solid ${c.border}` : "none"}}>
               <span style={{fontSize:"14px", color:c.text, fontWeight:600}}>{link.label}</span>
               {link.href ? (
                 <a href={link.href} target="_blank" rel="noreferrer" style={{fontSize:"13px", color:c.accent, textDecoration:"none"}}>{link.value}</a>
+              ) : link.screen ? (
+                <span onClick={() => setScreen(link.screen)} style={{fontSize:"13px", color:c.accent, cursor:"pointer", display:"flex", alignItems:"center", gap:"4px"}}>{link.value} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
               ) : (
                 <span style={{fontSize:"13px", color:c.text2}}>{link.value}</span>
               )}
@@ -2049,7 +2401,127 @@ export default function App() {
         <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
       </header>
       <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px"}}>
-        <div style={{textAlign:"center", margin:"20px 0 32px"}}>
+        {/* B1.5.6 — Battle Rank */}
+        {(() => {
+          const wins = battleHistory.filter(b => b.result === "win").length;
+          const RANKS = [
+            { name:"Bronze I",   min:0,  next:3  },
+            { name:"Bronze II",  min:3,  next:7  },
+            { name:"Silver I",   min:7,  next:12 },
+            { name:"Silver II",  min:12, next:18 },
+            { name:"Gold I",     min:18, next:25 },
+            { name:"Gold II",    min:25, next:33 },
+            { name:"Platinum",   min:33, next:42 },
+            { name:"Diamond",    min:42, next:null },
+          ];
+          const rank = [...RANKS].reverse().find(r => wins >= r.min) || RANKS[0];
+          const toNext = rank.next !== null ? rank.next - wins : null;
+          const pct = rank.next !== null
+            ? Math.round(((wins - rank.min) / (rank.next - rank.min)) * 100)
+            : 100;
+          const rankColor = rank.name.startsWith("Diamond") ? "#818CF8"
+            : rank.name.startsWith("Platinum") ? "#22D3EE"
+            : rank.name.startsWith("Gold") ? "#FFB300"
+            : rank.name.startsWith("Silver") ? "#A0AEC0"
+            : "#CD7F32";
+
+          // Record + streak (absorbed from B1.2)
+          let streak = 0;
+          for (let i = 0; i < battleHistory.length; i++) {
+            if (battleHistory[i].result === "win") streak++; else break;
+          }
+          const losses = battleHistory.filter(b=>b.result==="loss").length;
+          const ties   = battleHistory.filter(b=>b.result==="tie").length;
+          const winRate = battleHistory.length > 0 ? Math.round((wins/battleHistory.length)*100) : 0;
+
+          return battleHistory.length > 0 ? (
+            <div style={{background:c.bg2, border:`1px solid ${rankColor}40`, borderRadius:"18px", padding:"18px 20px", marginBottom:"20px"}}>
+              <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Battle Rank</div>
+              <div style={{display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:"14px"}}>
+                <div>
+                  <div style={{fontSize:"26px", fontWeight:900, color:rankColor, lineHeight:1}}>{rank.name}</div>
+                  <div style={{fontSize:"12px", color:c.text2, marginTop:"4px"}}>{wins} win{wins===1?"":"s"} total</div>
+                </div>
+                {toNext !== null && RANKS[RANKS.indexOf(rank)+1] && (
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:"11px", color:c.text2, marginBottom:"3px"}}>Next</div>
+                    <div style={{fontSize:"16px", fontWeight:800, color:c.text}}>{RANKS[RANKS.indexOf(rank)+1].name}</div>
+                    <div style={{fontSize:"11px", color:c.text2, marginTop:"2px"}}>{toNext} win{toNext===1?"":"s"} away</div>
+                  </div>
+                )}
+                {toNext === null && (
+                  <div style={{fontSize:"13px", fontWeight:700, color:rankColor}}>Max Rank</div>
+                )}
+              </div>
+              <div style={{height:"5px", background:c.bg3, borderRadius:"3px", overflow:"hidden", marginBottom:"14px"}}>
+                <div style={{height:"100%", width:`${pct}%`, background:rankColor, borderRadius:"3px", transition:"width 0.6s ease"}}/>
+              </div>
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${c.border}`, paddingTop:"12px"}}>
+                <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                  <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>{wins}W</span>
+                  <span style={{fontSize:"13px", fontWeight:700, color:"#FF4500"}}>{losses}L</span>
+                  <span style={{fontSize:"13px", fontWeight:700, color:"#FFB300"}}>{ties}T</span>
+                  <span style={{fontSize:"11px", color:c.text2}}>· {winRate}%</span>
+                </div>
+                {streak >= 2 && <span style={{fontSize:"12px", fontWeight:700, color:c.accent}}>{streak} win streak</span>}
+              </div>
+            </div>
+          ) : null;
+        })()}
+
+        {/* B3.4 — Battle Identity */}
+        {battleHistory.length >= 3 && (() => {
+          const wins   = battleHistory.filter(b=>b.result==="win").length;
+          const losses = battleHistory.filter(b=>b.result==="loss").length;
+          const ties   = battleHistory.filter(b=>b.result==="tie").length;
+          const total  = battleHistory.length;
+          const winRate = Math.round((wins/total)*100);
+
+          // Detect comeback: lost then won consecutively
+          let comingBack = false;
+          if (battleHistory.length >= 4) {
+            const recent4 = battleHistory.slice(0,4);
+            const hadLoss = recent4.slice(2).some(b=>b.result==="loss");
+            const thenWon = recent4.slice(0,2).every(b=>b.result==="win");
+            comingBack = hadLoss && thenWon;
+          }
+
+          // Current streak
+          let streak = 0;
+          for (let i=0; i<battleHistory.length; i++) {
+            if (battleHistory[i].result==="win") streak++; else break;
+          }
+
+          let identity, identitySub;
+          if (comingBack) {
+            identity = "Comeback Fighter";
+            identitySub = "You take losses and come back stronger.";
+          } else if (winRate >= 70) {
+            identity = "Consistent Winner";
+            identitySub = `${winRate}% win rate. Rarely beaten.`;
+          } else if (streak >= 3) {
+            identity = "On a Roll";
+            identitySub = `${streak} wins in a row. Keep going.`;
+          } else if (losses > wins && winRate < 40) {
+            identity = "Challenger";
+            identitySub = "Keep roasting. The rank will follow.";
+          } else {
+            identity = "Strategic Competitor";
+            identitySub = "You pick your battles. That's a skill too.";
+          }
+
+          return (
+            <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"14px", padding:"14px 18px", marginBottom:"20px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"5px"}}>Battle Identity</div>
+                <div style={{fontSize:"16px", fontWeight:800, color:c.text}}>{identity}</div>
+                <div style={{fontSize:"12px", color:c.text2, marginTop:"3px"}}>{identitySub}</div>
+              </div>
+            </div>
+          );
+        })()}
+
+        <div style={{textAlign:"center", margin:"0 0 24px"}}>
           <div style={{width:"68px", height:"68px", borderRadius:"50%", background:`${c.accent}18`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></svg></div>
           <div style={{fontSize:"36px", fontWeight:900, color:c.text, letterSpacing:"-1px", lineHeight:1.1}}>Roast Them.<br/>Beat Them.</div>
           <div style={{fontSize:"14px", color:c.text2, marginTop:"10px", lineHeight:1.5}}>Get roasted, then send the score to a friend. Whoever scores higher wins bragging rights.</div>
@@ -2079,6 +2551,8 @@ export default function App() {
           </div>
         </div>
 
+
+
         <button style={{...styles.btn, width:"100%", fontSize:"17px", padding:"18px", display:"flex", alignItems:"center", justifyContent:"center", gap:"9px"}} onClick={() => setScreen("app")}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
@@ -2103,6 +2577,7 @@ export default function App() {
           </button>
         )}
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2228,132 +2703,646 @@ export default function App() {
   );
   }
 
-  // HISTORY
-  if (screen === "history") return (
+  // HISTORY — Tabs: Roasts + Battles
+  if (screen === "history") {
+    const [histTab, setHistTab] = React.useState("roasts");
+    const [showInsights, setShowInsights] = React.useState(false);
+
+    const EmptyState = ({ icon, title, sub, cta, onCta }) => (
+      <div style={{textAlign:"center", padding:"48px 24px"}}>
+        <div style={{width:"64px", height:"64px", borderRadius:"50%", background:`${c.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
+          {icon}
+        </div>
+        <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{title}</div>
+        <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"24px", maxWidth:"260px", margin:"0 auto 24px"}}>{sub}</div>
+        {cta && <button onClick={onCta} style={{...styles.btn, padding:"13px 28px", fontSize:"15px"}}>{cta}</button>}
+      </div>
+    );
+
+    return (
     <div style={styles.app}>
-      <header style={styles.header}>
-        <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
-          <button style={{...styles.btnOutline, padding:"8px 12px"}} onClick={() => setScreen("app")}><span style={{display:"flex", alignItems:"center", gap:"4px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</span></button>
-          <span style={{fontWeight:800, fontSize:"18px"}}>My Roast History</span>
+      <div style={{maxWidth:"480px", margin:"0 auto"}}>
+        {/* Header */}
+        <div style={{padding:"20px 20px 0", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+          <div style={{fontSize:"24px", fontWeight:900, color:c.text, letterSpacing:"-0.5px"}}>History</div>
+          {(history.length > 0 || battleHistory.length > 0) && (
+            <div style={{fontSize:"12px", color:c.text2}}>{history.length} roasts · {battleHistory.length} battles</div>
+          )}
         </div>
-        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
-      </header>
-      <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px"}}>
-        {/* Page intro */}
-        <div style={{textAlign:"center", marginBottom:"28px"}}>
-          <div style={{fontSize:"36px", fontWeight:900, color:c.text, letterSpacing:"-1px", lineHeight:1.1}}>Every Roast.<br/>Every Receipt.</div>
-          <div style={{fontSize:"14px", color:c.text2, marginTop:"8px"}}>Your full track record, no hiding from it.</div>
-        </div>
-        {/* Progress Chart — Brutal only */}
-        {history.length >= 2 && (
-          plan === "brutal" ? (
-            <div style={{...styles.card, marginBottom:"20px"}}>
-              <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"16px", textTransform:"uppercase", letterSpacing:"1px"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                Progress Tracking
+
+        {/* C2 — COMMUNICATION SCORE */}
+        {history.length >= 3 && (() => {
+          const allScores = history.map(h => h.score || 0).filter(s => s > 0);
+          if (allScores.length < 3) return null;
+
+          // Overall — weighted avg (recent scores count more)
+          const weighted = allScores.map((s, i) => s * (1 + (allScores.length - 1 - i) * 0.05));
+          const overall  = Math.min(10, Math.round(weighted.reduce((a,b)=>a+b,0) / weighted.length * 10) / 10);
+
+          // By mode
+          const byMode = {};
+          history.forEach(h => { if (h.mode && h.score) { if (!byMode[h.mode]) byMode[h.mode]=[]; byMode[h.mode].push(h.score); } });
+          const modeAvg = m => byMode[m]?.length >= 2 ? byMode[m].reduce((a,b)=>a+b,0)/byMode[m].length : null;
+
+          // Confidence — Mentor mode scores. Fallback: overall scaled by trajectory
+          const half = Math.ceil(allScores.length/2);
+          const recentHalf = allScores.slice(0, half);
+          const olderHalf  = allScores.slice(half);
+          const recentAvg  = recentHalf.reduce((a,b)=>a+b,0)/recentHalf.length;
+          const olderAvg   = olderHalf.length > 0 ? olderHalf.reduce((a,b)=>a+b,0)/olderHalf.length : recentAvg;
+          const trajectoryBonus = Math.max(-1, Math.min(1, (recentAvg - olderAvg) * 0.5));
+
+          const raw_confidence  = modeAvg("Mentor")  ?? Math.min(10, Math.max(1, overall + trajectoryBonus * 1.2));
+          const raw_clarity     = modeAvg("Honest")  ?? Math.min(10, Math.max(1, overall - 0.3));
+          const raw_persuasion  = modeAvg("Savage")  ?? Math.min(10, Math.max(1, overall + trajectoryBonus * 0.8));
+
+          // Authenticity — inverse of score variance (consistent = more authentic)
+          const mean = allScores.reduce((a,b)=>a+b,0)/allScores.length;
+          const variance = allScores.reduce((a,s)=>a+Math.pow(s-mean,2),0)/allScores.length;
+          const raw_authenticity = Math.min(10, Math.max(1, 10 - variance * 0.4 + trajectoryBonus * 0.5));
+
+          // Round all to 1dp
+          const scores_c2 = {
+            overall:      Math.round(overall * 10) / 10,
+            confidence:   Math.round(raw_confidence * 10) / 10,
+            clarity:      Math.round(raw_clarity * 10) / 10,
+            authenticity: Math.round(raw_authenticity * 10) / 10,
+            persuasion:   Math.round(raw_persuasion * 10) / 10,
+          };
+
+          const BAR_COLOR = val =>
+            val >= 7.5 ? "#22C55E"
+            : val >= 5  ? "#FFB300"
+            : "#FF4500";
+
+          const Metric = ({ label, value }) => (
+            <div style={{marginBottom:"14px"}}>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"6px"}}>
+                <span style={{fontSize:"13px", color:c.text2, fontWeight:500}}>{label}</span>
+                <span style={{fontSize:"14px", fontWeight:800, color:BAR_COLOR(value)}}>{value}</span>
               </div>
-              <div style={{display:"flex", alignItems:"flex-end", gap:"6px", height:"80px", padding:"0 4px"}}>
-                {history.slice(0,10).reverse().map((h,i) => (
-                  <div key={i} style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:"4px"}}>
-                    <div style={{fontSize:"9px", color:c.text2}}>{h.score}</div>
-                    <div style={{
-                      width:"100%",
-                      height:`${(h.score/10)*70}px`,
-                      background: h.score <= 3 ? "#FF4500" : h.score <= 6 ? "#FFB300" : "#22C55E",
-                      borderRadius:"4px 4px 0 0",
-                      minHeight:"4px"
-                    }}/>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:"flex", justifyContent:"space-between", marginTop:"8px"}}>
-                <span style={{fontSize:"11px", color:c.text2}}>Oldest</span>
-                <span style={{fontSize:"11px", color:c.text2}}>Latest</span>
-              </div>
-              <div style={{marginTop:"12px", padding:"10px", background:c.bg3, borderRadius:"10px", textAlign:"center"}}>
-                {history.length >= 2 && history[0].score > history[history.length-1].score ? (
-                    <span style={{fontSize:"13px", color:"#22C55E", fontWeight:700}}>You're improving! +{history[0].score - history[history.length-1].score} points</span>
-                ) : history.length >= 2 && history[0].score < history[history.length-1].score ? (
-                  <span style={{fontSize:"13px", color:"#FF4500", fontWeight:700}}>Score dropped {history[history.length-1].score - history[0].score} points — time to step up</span>
-                ) : (
-                  <span style={{fontSize:"13px", color:"#FFB300", fontWeight:700}}>Consistent score — push for higher</span>
-                )}
+              <div style={{height:"3px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
+                <div style={{height:"100%", width:`${(value/10)*100}%`, background:BAR_COLOR(value), borderRadius:"2px", transition:"width 0.8s ease"}}/>
               </div>
             </div>
+          );
+
+          return (
+            <div style={{margin:"16px 20px 0", background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"18px", padding:"20px 20px 6px"}}>
+              {/* Header */}
+              <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"20px"}}>
+                <div>
+                  <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"8px"}}>Communication Score</div>
+                  <div style={{fontSize:"42px", fontWeight:900, lineHeight:1, color:BAR_COLOR(scores_c2.overall)}}>
+                    {scores_c2.overall}
+                    <span style={{fontSize:"18px", fontWeight:500, color:c.text2}}>/10</span>
+                  </div>
+                </div>
+                {/* Arc indicator */}
+                <svg width="64" height="64" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke={c.bg3} strokeWidth="5"/>
+                  <circle cx="32" cy="32" r="26" fill="none"
+                    stroke={BAR_COLOR(scores_c2.overall)} strokeWidth="5"
+                    strokeDasharray={`${(scores_c2.overall/10) * 163.4} 163.4`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 32 32)"
+                    style={{transition:"stroke-dasharray 0.8s ease"}}
+                  />
+                  <text x="32" y="37" textAnchor="middle" fontSize="13" fontWeight="800" fill={BAR_COLOR(scores_c2.overall)}>
+                    {scores_c2.overall >= 8 ? "Strong" : scores_c2.overall >= 5 ? "Good" : "Growing"}
+                  </text>
+                </svg>
+              </div>
+
+              {/* Metrics */}
+              <Metric label="Confidence"   value={scores_c2.confidence} />
+              <Metric label="Clarity"      value={scores_c2.clarity} />
+              <Metric label="Authenticity" value={scores_c2.authenticity} />
+              <Metric label="Persuasion"   value={scores_c2.persuasion} />
+
+              <div style={{fontSize:"11px", color:c.text2, marginTop:"4px", marginBottom:"14px", opacity:0.6}}>
+                Based on {allScores.length} roast{allScores.length===1?"":"s"} · Updates with every result
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* B3.5 — Monthly Report Foundation (data computed here, used in future phases) */}
+        {/* B2.4 — Monthly Report Preview */}
+        {history.length >= 3 && (() => {
+          const now = new Date();
+          const monthName = now.toLocaleString("default", { month:"long" });
+          const thisMonth = history.filter(h => {
+            const d = new Date(h.date || h.created_at);
+            return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          });
+          if (thisMonth.length === 0) return null;
+          const monthScores = thisMonth.map(h => h.score || 0).filter(s => s > 0);
+          const monthAvg = monthScores.length > 0 ? monthScores.reduce((a,b)=>a+b,0)/monthScores.length : 0;
+          const allScores = history.map(h=>h.score||0).filter(s=>s>0);
+          const allAvg = allScores.length > 0 ? allScores.reduce((a,b)=>a+b,0)/allScores.length : 0;
+          const improved = monthAvg > allAvg;
+          // Days left in month
+          const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+          const daysLeft = lastDay - now.getDate();
+
+          return (
+            <div style={{margin:"14px 20px 0", background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", padding:"16px 18px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"6px"}}>{monthName} Report</div>
+                <div style={{fontSize:"13px", color:c.text, fontWeight:600, marginBottom:"2px"}}>{thisMonth.length} roast{thisMonth.length===1?"":"s"} this month</div>
+                <div style={{fontSize:"12px", color: improved ? "#22C55E" : c.text2}}>
+                  {improved ? "Improvement detected" : "Keep going to see a trend"}
+                </div>
+              </div>
+              <div style={{textAlign:"right", flexShrink:0}}>
+                <div style={{fontSize:"11px", color:c.text2, marginBottom:"3px"}}>
+                  {daysLeft > 0 ? `${daysLeft} days left` : "Month complete"}
+                </div>
+
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* B1.5 — Progress Intelligence */}
+        {history.length >= 1 && (() => {
+          // ── Core calculations ──────────────────────────────
+          const scores = history.map(h => h.score || 0).filter(s => s > 0);
+          const avg = scores.length > 0
+            ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length * 10) / 10
+            : null;
+          const bestScore = scores.length > 0 ? Math.max(...scores) : null;
+
+          // Split into recent half vs older half for trend
+          const half = Math.ceil(scores.length / 2);
+          const recent = scores.slice(0, half);
+          const older  = scores.slice(half);
+          const recentAvg = recent.length > 0 ? recent.reduce((a,b)=>a+b,0)/recent.length : null;
+          const olderAvg  = older.length  > 0 ? older.reduce((a,b)=>a+b,0)/older.length   : null;
+          const trend = recentAvg && olderAvg ? recentAvg - olderAvg : null;
+
+          // Status label
+          const status = scores.length < 3
+            ? { label: "Needs More Data", color: c.text2, sub: `${3 - scores.length} more roast${3-scores.length===1?"":"s"} to unlock insights` }
+            : trend === null ? { label: "Stable", color: "#FFB300", sub: "Keep going to see your trend" }
+            : trend > 1.5    ? { label: "Improving Fast", color: "#22C55E", sub: "Your scores are rising quickly" }
+            : trend > 0.3    ? { label: "Improving Steadily", color: "#22C55E", sub: "Consistent upward trend" }
+            : trend > -0.3   ? { label: "Stable", color: "#FFB300", sub: "Scores are holding steady" }
+            : { label: "Keep Pushing", color: "#FF4500", sub: "Recent scores are lower than before" };
+
+          // Next milestone
+          const MILESTONES = [3, 5, 7, 8, 9];
+          const nextMilestone = avg !== null ? MILESTONES.find(m => m > avg) : null;
+          const distToMilestone = nextMilestone && avg ? Math.round((nextMilestone - avg) * 10) / 10 : null;
+          const milestoneReached = avg !== null ? MILESTONES.filter(m => m <= avg) : [];
+          const justReached = milestoneReached.length > 0 && distToMilestone !== null && distToMilestone < 0.3;
+
+          // Personal insight — one pattern
+          const modes = history.map(h => h.mode).filter(Boolean);
+          const types = history.map(h => h.inputType || h.input_type).filter(Boolean);
+          const topMode = modes.length > 0
+            ? Object.entries(modes.reduce((a,m)=>({...a,[m]:(a[m]||0)+1}),{})).sort((a,b)=>b[1]-a[1])[0]
+            : null;
+          const topType = types.length > 0
+            ? Object.entries(types.reduce((a,t)=>({...a,[t]:(a[t]||0)+1}),{})).sort((a,b)=>b[1]-a[1])[0]
+            : null;
+          const weakMode = modes.length >= 4
+            ? Object.entries(modes.reduce((a,m)=>({...a,[m]:(a[m]||0)+1}),{})).sort((a,b)=>a[1]-b[1])[0]
+            : null;
+
+          // Score by mode to find strongest/weakest
+          const byMode = {};
+          history.forEach(h => {
+            if (!h.mode || !h.score) return;
+            if (!byMode[h.mode]) byMode[h.mode] = [];
+            byMode[h.mode].push(h.score);
+          });
+          const modeAvgs = Object.entries(byMode)
+            .filter(([,s]) => s.length >= 2)
+            .map(([m,s]) => [m, s.reduce((a,b)=>a+b,0)/s.length])
+            .sort((a,b)=>b[1]-a[1]);
+
+          let insight = null;
+          if (modeAvgs.length >= 2) {
+            insight = `Your strongest mode is ${modeAvgs[0][0]} (avg ${Math.round(modeAvgs[0][1]*10)/10}/10)`;
+          } else if (topType && topType[1] >= 2) {
+            const cleanType = topType[0].replace(/[💕📸💬📄✨]/g,"").trim();
+            insight = cleanType ? `Most of your roasts are about ${cleanType.toLowerCase()}` : null;
+          } else if (topMode && topMode[1] >= 2) {
+            insight = `You favour ${topMode[0]} mode — ${topMode[1]} of your ${history.length} roasts`;
+          }
+
+          // Monthly timeline
+          const monthMap = {};
+          history.forEach(h => {
+            const d = new Date(h.date || h.created_at);
+            if (isNaN(d)) return;
+            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+            const label = d.toLocaleString("default", {month:"short"});
+            if (!monthMap[key]) monthMap[key] = { label, scores:[] };
+            monthMap[key].scores.push(h.score || 0);
+          });
+          const timeline = Object.entries(monthMap)
+            .sort((a,b) => a[0].localeCompare(b[0]))
+            .map(([,v]) => ({ label:v.label, avg: Math.round(v.scores.reduce((a,b)=>a+b,0)/v.scores.length*10)/10 }));
+
+          return (
+            <div style={{padding:"16px 20px 0"}}>
+              <button onClick={()=>setShowInsights(s=>!s)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:"none",border:`1px solid ${c.border}`,borderRadius:"14px",padding:"13px 16px",cursor:"pointer",marginBottom:showInsights?"12px":"0"}}>
+                <span style={{fontSize:"13px",fontWeight:700,color:c.text}}>Insights</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:showInsights?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              {showInsights && <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+
+              {/* 1 — YOUR PROGRESS */}
+              <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"18px", padding:"20px", position:"relative", overflow:"hidden"}}>
+                {/* Subtle gradient accent */}
+                <div style={{position:"absolute", top:0, right:0, width:"120px", height:"120px", background:`radial-gradient(circle, ${status.color}18 0%, transparent 70%)`, pointerEvents:"none"}}/>
+                <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Your Progress</div>
+                <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"16px"}}>
+                  <div>
+                    <div style={{fontSize:"44px", fontWeight:900, color: avg ? scoreColor(avg) : c.text2, lineHeight:1}}>
+                      {avg ?? "—"}<span style={{fontSize:"20px", color:c.text2, fontWeight:600}}>/10</span>
+                    </div>
+                    <div style={{fontSize:"12px", color:c.text2, marginTop:"5px"}}>Average score</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{display:"inline-flex", alignItems:"center", gap:"5px", background:`${status.color}18`, border:`1px solid ${status.color}40`, borderRadius:"20px", padding:"5px 11px", marginBottom:"6px"}}>
+                      <div style={{width:"6px", height:"6px", borderRadius:"50%", background:status.color, flexShrink:0}}/>
+                      <span style={{fontSize:"12px", fontWeight:700, color:status.color}}>{status.label}</span>
+                    </div>
+                    <div style={{fontSize:"11px", color:c.text2}}>{status.sub}</div>
+                  </div>
+                </div>
+                <div style={{padding:"10px 12px", background:c.bg3, borderRadius:"10px", display:"inline-block", minWidth:"80px"}}>
+                  <div style={{fontSize:"18px", fontWeight:900, color:c.accent}}>{history.length}</div>
+                  <div style={{fontSize:"10px", color:c.text2, marginTop:"2px"}}>Total roasts</div>
+                </div>
+              </div>
+
+              {/* B3.1 — COMMUNICATION PROFILE */}
+              {scores.length >= 4 && (() => {
+                // Derive profile from real patterns only
+                // 1. Mode distribution — what does the user reach for?
+                const modeCount = {};
+                history.forEach(h => { if (h.mode) modeCount[h.mode] = (modeCount[h.mode]||0)+1; });
+                const topMode = Object.entries(modeCount).sort((a,b)=>b[1]-a[1])[0]?.[0];
+
+                // 2. Score trajectory — improving or flat?
+                const firstHalf  = scores.slice(Math.ceil(scores.length/2)).reverse(); // oldest first
+                const secondHalf = scores.slice(0, Math.ceil(scores.length/2)).reverse(); // newest first
+                const firstAvg  = firstHalf.reduce((a,b)=>a+b,0)/firstHalf.length;
+                const secondAvg = secondHalf.reduce((a,b)=>a+b,0)/secondHalf.length;
+                const improving  = secondAvg - firstAvg > 0.5;
+                const consistent = Math.abs(secondAvg - firstAvg) <= 0.5;
+
+                // 3. Score level — what tier?
+                const highScorer = avg !== null && avg >= 7;
+                const midScorer  = avg !== null && avg >= 5 && avg < 7;
+
+                // Derive exactly one profile — no random, no invention
+                let profile, profileSub;
+                if (topMode === "Savage" && highScorer) {
+                  profile = "Direct Communicator";
+                  profileSub = "You cut through noise. Your writing is clear and doesn't waste words.";
+                } else if (topMode === "Mentor" && improving) {
+                  profile = "Confidence Builder";
+                  profileSub = "You seek growth over validation. Your scores reflect that.";
+                } else if (topMode === "Honest" && consistent) {
+                  profile = "Structured Thinker";
+                  profileSub = "You value clarity and logic over style. Consistent by design.";
+                } else if (topMode === "Comedian") {
+                  profile = "Creative Communicator";
+                  profileSub = "You use tone and personality as tools. Not everyone can do that.";
+                } else if (improving && midScorer) {
+                  profile = "Emerging Writer";
+                  profileSub = "Your trajectory is clear. You're getting better with every roast.";
+                } else if (highScorer) {
+                  profile = "Persuasive Writer";
+                  profileSub = "Your writing moves people. That's the hardest thing to teach.";
+                } else if (consistent) {
+                  profile = "Concise Communicator";
+                  profileSub = "You're steady. Now push for sharp.";
+                } else {
+                  profile = "Detail Oriented";
+                  profileSub = "You go deep. The challenge is learning what to cut.";
+                }
+
+                // Strength — mode with highest avg (min 2 roasts)
+                const byMode = {};
+                history.forEach(h => { if (h.mode && h.score) { if (!byMode[h.mode]) byMode[h.mode] = []; byMode[h.mode].push(h.score); } });
+                const modeAvgs = Object.entries(byMode).filter(([,s])=>s.length>=2).map(([m,s])=>[m, s.reduce((a,b)=>a+b,0)/s.length]).sort((a,b)=>b[1]-a[1]);
+
+                const AREA_LABELS = { Savage:"Directness", Honest:"Clarity", Mentor:"Structure", Comedian:"Tone" };
+                const strongestArea = modeAvgs.length > 0 ? AREA_LABELS[modeAvgs[0][0]] || modeAvgs[0][0] : null;
+                const focusArea     = modeAvgs.length > 1 ? AREA_LABELS[modeAvgs[modeAvgs.length-1][0]] || modeAvgs[modeAvgs.length-1][0] : null;
+
+                return (
+                  <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"18px", padding:"18px 20px"}}>
+                    <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Your Communication Profile</div>
+
+                    {/* Profile name */}
+                    <div style={{fontSize:"19px", fontWeight:800, color:c.text, marginBottom:"6px"}}>{profile}</div>
+                    <div style={{fontSize:"13px", color:c.text2, lineHeight:1.6, marginBottom:"16px"}}>{profileSub}</div>
+
+                    {/* Strength + Focus as two quiet lines */}
+                    {(strongestArea || focusArea) && (
+                      <div style={{borderTop:`1px solid ${c.border}`, paddingTop:"14px", display:"flex", gap:"0", flexDirection:"column", gap:"10px"}}>
+                        {strongestArea && (
+                          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                            <span style={{fontSize:"12px", color:c.text2}}>Strongest Area</span>
+                            <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>{strongestArea}</span>
+                          </div>
+                        )}
+                        {focusArea && focusArea !== strongestArea && (
+                          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                            <span style={{fontSize:"12px", color:c.text2}}>Focus Area</span>
+                            <span style={{fontSize:"13px", fontWeight:700, color:c.accent}}>{focusArea}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 2 — NEXT MILESTONE */}
+              {avg !== null && scores.length >= 2 && (
+                <div style={{background: justReached ? `${c.accent}10` : c.bg2, border:`1px solid ${justReached ? c.accent + "60" : c.border}`, borderRadius:"18px", padding:"18px 20px", transition:"all 0.4s"}}>
+                  <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"12px"}}>Next Milestone</div>
+                  {justReached ? (
+                    <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                      <div style={{fontSize:"24px", fontWeight:900, color:c.accent}}>✦</div>
+                      <div>
+                        <div style={{fontSize:"15px", fontWeight:800, color:c.accent}}>Milestone reached — {avg}/10</div>
+                        <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Keep going to reach the next level</div>
+                      </div>
+                    </div>
+                  ) : nextMilestone ? (
+                    <>
+                      <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"10px"}}>
+                        <div>
+                          <span style={{fontSize:"13px", color:c.text2}}>Target </span>
+                          <span style={{fontSize:"20px", fontWeight:900, color:"#22C55E"}}>{nextMilestone}/10</span>
+                        </div>
+                        <div style={{fontSize:"12px", color:c.text2}}>{distToMilestone} pts away</div>
+                      </div>
+                      <div style={{height:"6px", background:c.bg3, borderRadius:"4px", overflow:"hidden"}}>
+                        <div style={{height:"100%", width:`${Math.min(((avg - (nextMilestone-1)) / 1) * 100, 100)}%`, background:`linear-gradient(90deg, ${scoreColor(avg)}, #22C55E)`, borderRadius:"4px", transition:"width 0.7s ease"}}/>
+                      </div>
+                      {/* B2.3 — Next Target: why it matters */}
+                      {(() => {
+                        const WHY = {
+                          3: "A score above 3 means your writing has something worth building on.",
+                          5: "Reaching 5 puts you above average. Most people never get here.",
+                          7: "Above 7, your writing becomes genuinely compelling. People notice.",
+                          8: "At 8, you're in rare company. Communication this strong opens doors.",
+                          9: "A 9 is elite. Almost nothing needs to change."
+                        };
+                        return WHY[nextMilestone] ? (
+                          <div style={{marginTop:"12px", paddingTop:"12px", borderTop:`1px solid ${c.border}`}}>
+                            <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1px", textTransform:"uppercase", marginBottom:"6px"}}>Why it matters</div>
+                            <div style={{fontSize:"13px", color:c.text2, lineHeight:1.6}}>{WHY[nextMilestone]}</div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </>
+                  ) : (
+                    <div style={{fontSize:"14px", color:"#22C55E", fontWeight:700}}>You've reached all milestones. Elite level.</div>
+                  )}
+                </div>
+              )}
+
+              {/* 4 — IMPROVEMENT TIMELINE */}
+              {timeline.length >= 2 && (
+                <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"18px", padding:"18px 20px"}}>
+                  <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"16px"}}>Timeline</div>
+                  <div style={{display:"flex", flexDirection:"column", gap:"0"}}>
+                    {timeline.map((m, i) => {
+                      const isLast = i === timeline.length - 1;
+                      const prev = i > 0 ? timeline[i-1].avg : null;
+                      const up = prev !== null ? m.avg > prev : null;
+                      return (
+                        <div key={i} style={{display:"flex", alignItems:"center", gap:"12px", paddingBottom: isLast ? "0" : "16px", position:"relative"}}>
+                          {/* Vertical line */}
+                          {!isLast && <div style={{position:"absolute", left:"19px", top:"28px", bottom:"0", width:"1px", background:c.border}}/>}
+                          {/* Dot */}
+                          <div style={{width:"14px", height:"14px", borderRadius:"50%", border:`2px solid ${isLast ? c.accent : c.border}`, background: isLast ? c.accent : c.bg3, flexShrink:0, zIndex:1, marginLeft:"13px"}}/>
+                          {/* Content */}
+                          <div style={{flex:1, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                            <span style={{fontSize:"13px", color: isLast ? c.text : c.text2, fontWeight: isLast ? 700 : 400}}>{m.label}</span>
+                            <div style={{display:"flex", alignItems:"center", gap:"6px"}}>
+                              {up !== null && (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={up ? "#22C55E" : "#FF4500"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  {up ? (<><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>) : (<><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>)}
+                                </svg>
+                              )}
+                              <span style={{fontSize:"14px", fontWeight: isLast ? 900 : 600, color: isLast ? scoreColor(m.avg) : c.text2}}>{m.avg}<span style={{fontSize:"10px", color:c.text2, fontWeight:400}}>/10</span></span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              </div>}
+            </div>
+          );
+        })()}
+
+        {/* Tabs */}
+        <div style={{display:"flex", gap:"0", margin:"16px 20px 0", background:c.bg2, borderRadius:"12px", padding:"4px", border:`1px solid ${c.border}`}}>
+          {[
+            { id:"roasts", label:`Roasts${history.length > 0 ? ` (${history.length})` : ""}` },
+            { id:"battles", label:`Battles${battleHistory.length > 0 ? ` (${battleHistory.length})` : ""}` },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setHistTab(tab.id)} style={{flex:1, padding:"9px", borderRadius:"9px", border:"none", cursor:"pointer", fontSize:"13px", fontWeight:700, transition:"all 0.15s",
+              background: histTab === tab.id ? (dark ? "#222" : "#fff") : "transparent",
+              color: histTab === tab.id ? c.text : c.text2,
+              boxShadow: histTab === tab.id ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+            }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{padding:"12px 20px 100px"}}>
+          {histTab === "roasts" ? (
+            history.length === 0 ? (
+              <EmptyState
+                icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>}
+                title="Start your first roast"
+                sub={user ? "Your progress will appear here. Start your first roast." : "Sign in to save your history and track your progress across devices."}
+                cta={user ? "Get Roasted" : "Sign In to Save History"}
+                onCta={() => user ? setScreen("app") : setShowLogin(true)}
+              />
+            ) : (
+              <>
+              {/* B3.2 — Personal Records */}
+              {(() => {
+                if (history.length < 2) return null;
+
+                // Best score ever
+                const best = history.reduce((b,h) => (!b || (h.score||0)>(b.score||0)) ? h : b, null);
+                const bestDate = best ? new Date(best.date || best.created_at) : null;
+                const bestDateStr = bestDate && !isNaN(bestDate) ? bestDate.toLocaleString("default",{month:"short",year:"numeric"}) : "";
+
+                // Most improved month — month where avg rose most vs previous month
+                const monthMap = {};
+                history.forEach(h => {
+                  const d = new Date(h.date || h.created_at);
+                  if (isNaN(d) || !h.score) return;
+                  const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+                  const label = d.toLocaleString("default",{month:"short", year:"numeric"});
+                  if (!monthMap[key]) monthMap[key] = { label, scores:[] };
+                  monthMap[key].scores.push(h.score);
+                });
+                const months = Object.entries(monthMap).sort((a,b)=>a[0].localeCompare(b[0]));
+                let mostImprovedMonth = null;
+                let maxImprovement = 0;
+                for (let i = 1; i < months.length; i++) {
+                  const prev = months[i-1][1].scores.reduce((a,b)=>a+b,0)/months[i-1][1].scores.length;
+                  const curr = months[i][1].scores.reduce((a,b)=>a+b,0)/months[i][1].scores.length;
+                  const delta = curr - prev;
+                  if (delta > maxImprovement) { maxImprovement = delta; mostImprovedMonth = months[i][1].label; }
+                }
+
+                // Most used mode
+                const modeCount = {};
+                history.forEach(h => { if (h.mode) modeCount[h.mode] = (modeCount[h.mode]||0)+1; });
+                const topMode = Object.entries(modeCount).sort((a,b)=>b[1]-a[1])[0];
+
+                const rows = [
+                  best ? {
+                    label: "Best Score",
+                    value: `${best.score}/10`,
+                    sub: `${best.mode} Mode${bestDateStr ? ` · ${bestDateStr}` : ""}`,
+                    color: scoreColor(best.score)
+                  } : null,
+                  mostImprovedMonth ? {
+                    label: "Most Improved",
+                    value: mostImprovedMonth,
+                    sub: `+${Math.round(maxImprovement*10)/10} avg pts`,
+                    color: "#22C55E"
+                  } : null,
+                  topMode ? {
+                    label: "Favourite Mode",
+                    value: topMode[0],
+                    sub: `${topMode[1]} of ${history.length} roasts`,
+                    color: c.accent
+                  } : null,
+                ].filter(Boolean);
+
+                if (rows.length === 0) return null;
+
+                return (
+                  <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", marginBottom:"12px", overflow:"hidden"}}>
+                    {rows.map((row, i) => (
+                      <div key={i} style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 18px", borderBottom: i < rows.length-1 ? `1px solid ${c.border}` : "none"}}>
+                        <div>
+                          <div style={{fontSize:"12px", color:c.text2}}>{row.label}</div>
+                          <div style={{fontSize:"11px", color:c.text2, opacity:0.6, marginTop:"2px"}}>{row.sub}</div>
+                        </div>
+                        <div style={{fontSize:"17px", fontWeight:900, color:row.color}}>{row.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {history.map((h, i) => (
+                <div key={i} onClick={() => {
+                  setResult({ score:h.score, oneliner:h.oneliner, verdict:h.verdict||"", wrong:Array.isArray(h.wrong)?h.wrong:[], works:Array.isArray(h.works)?h.works:[], fix:Array.isArray(h.fix)?h.fix:[], theFix:h.theFix||h.the_fix||null, mode:h.mode||"Savage", input:h.input||h.input_text||"" });
+                  setScreen("result");
+                }}
+                style={{background:c.bg2, borderRadius:"14px", padding:"16px", marginBottom:"10px", border:`1px solid ${c.border}`, cursor:"pointer", transition:"all 0.15s"}}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = `${c.accent}50`; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.transform = "translateY(0)"; }}>
+                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"10px"}}>
+                    <div>
+                      <span style={{fontSize:"11px", fontWeight:700, color:c.accent, textTransform:"uppercase", letterSpacing:"0.8px"}}>{h.mode} Mode</span>
+                      <div style={{fontSize:"12px", color:c.text2, marginTop:"3px"}}>{h.date || h.created_at?.split("T")[0] || ""}</div>
+                    </div>
+                    <div style={{fontSize:"28px", fontWeight:900, color:scoreColor(h.score), lineHeight:1}}>
+                      {h.score}<span style={{fontSize:"14px", color:c.text2, fontWeight:600}}>/10</span>
+                    </div>
+                  </div>
+                  {(h.input || h.input_text) && (
+                    <div style={{fontSize:"12px", color:c.text2, marginBottom:"8px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontStyle:"italic"}}>
+                      "{h.input || h.input_text}"
+                    </div>
+                  )}
+                  <div style={{fontSize:"13px", color:c.text, fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                    {h.oneliner}
+                  </div>
+                </div>
+              ))
+              }
+              </>
+            )
           ) : (
-            <div style={{...styles.card, marginBottom:"20px", overflow:"hidden", position:"relative", padding:0}}>
-              {/* Blurred chart preview behind */}
-              <div style={{padding:"20px 20px 0", filter:"blur(3px)", opacity:0.4, pointerEvents:"none", userSelect:"none"}}>
-                <div style={{display:"flex", alignItems:"flex-end", gap:"6px", height:"60px", padding:"0 4px"}}>
-                  {[4,6,5,7,6,8,7,9].map((s,i) => (
-                    <div key={i} style={{flex:1, height:`${(s/10)*58}px`, background: s <= 3 ? "#FF4500" : s <= 6 ? "#FFB300" : "#22C55E", borderRadius:"4px 4px 0 0", minHeight:"4px"}}/>
+            battleHistory.length === 0 ? (
+              <EmptyState
+                icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>}
+                title="No battles yet"
+                sub="Challenge someone and start climbing."
+                cta="Start a Roast"
+                onCta={() => setScreen("app")}
+              />
+            ) : (
+              <>
+                {/* Battle record summary */}
+                <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px", marginBottom:"16px"}}>
+                  {[
+                    { val:battleHistory.filter(b=>b.result==="win").length, label:"Wins", color:"#22C55E" },
+                    { val:battleHistory.filter(b=>b.result==="loss").length, label:"Losses", color:"#FF4500" },
+                    { val:battleHistory.filter(b=>b.result==="tie").length, label:"Ties", color:"#FFB300" },
+                  ].map((s,i) => (
+                    <div key={i} style={{textAlign:"center", padding:"12px 8px", background:c.bg2, borderRadius:"12px", border:`1px solid ${c.border}`}}>
+                      <div style={{fontSize:"24px", fontWeight:900, color:s.color}}>{s.val}</div>
+                      <div style={{fontSize:"11px", color:c.text2, marginTop:"2px"}}>{s.label}</div>
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Lock overlay */}
-              <div style={{padding:"20px", paddingTop:"12px", textAlign:"center"}}>
-                <div style={{width:"56px", height:"56px", borderRadius:"50%", background:`${c.bg3}`, border:`2px solid ${c.border}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px"}}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                </div>
-                <div style={{fontSize:"15px", fontWeight:800, color:c.text, marginBottom:"4px"}}>Progress Tracking</div>
-                <div style={{fontSize:"13px", color:c.text2, marginBottom:"18px", lineHeight:1.5}}>See your score trend over time.<br/>Exclusive to Brutal.</div>
-                <button
-                  onClick={() => { setPaywallPreselect("brutal"); setShowPaywall(true); }}
-                  style={{...styles.btn, padding:"12px 28px", fontSize:"14px", display:"inline-flex", alignItems:"center", gap:"8px", borderRadius:"12px"}}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                  Unlock with Brutal
-                </button>
-                <div style={{marginTop:"10px", fontSize:"11px", color:c.text2}}>$5.99/month · Cancel anytime</div>
-              </div>
-            </div>
-          )
-        )}
-
-        {history.length === 0 ? (
-          <div style={{textAlign:"center", padding:"24px 0 40px", color:c.text2}}>
-            <div style={{width:"68px", height:"68px", borderRadius:"50%", background:`${c.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-            </div>
-            <div style={{fontWeight:700, marginBottom:"8px", color:c.text}}>No roasts yet</div>
-            <div style={{fontSize:"14px", marginBottom:"24px"}}>
-              {user ? "Your roasts will appear here after your first session" : "Sign in to save and sync your history across devices"}
-            </div>
-            {!user && (
-              <button onClick={() => setShowLogin(true)} style={{...styles.btnOutline, padding:"12px 24px", fontSize:"14px", display:"flex", alignItems:"center", gap:"8px", margin:"0 auto 16px"}}>
-                Sign In to Save History
-              </button>
-            )}
-            <button style={{...styles.btn, padding:"14px 28px", fontSize:"15px", display:"flex", alignItems:"center", gap:"8px", margin:"0 auto"}} onClick={() => setScreen("app")}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-              Get Roasted Now
-            </button>
-          </div>
-        ) : history.map((h,i) => (
-          <div key={i} style={{...styles.card, marginBottom:"12px"}}>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"8px"}}>
-              <span style={{fontSize:"12px", color:c.accent, fontWeight:700}}>{h.mode} Mode</span>
-              <span style={{fontSize:"11px", color:c.text2}}>{h.date}</span>
-            </div>
-            <div style={{fontSize:"13px", color:c.text2, marginBottom:"8px"}}>{h.input}</div>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-              <div style={{fontSize:"22px", fontWeight:900, color:scoreColor(h.score)}}>{h.score}/10</div>
-              <div style={{fontSize:"13px", color:c.text2, fontStyle:"italic", maxWidth:"200px", textAlign:"right"}}>"{h.oneliner}"</div>
-            </div>
-          </div>
-        ))}
+                {battleHistory.map((b, i) => (
+                  <div key={i} style={{background:c.bg2, borderRadius:"14px", padding:"14px 16px", marginBottom:"8px", border:`1px solid ${b.result==="win" ? "#22C55E40" : b.result==="loss" ? "#FF450040" : c.border}`, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{display:"flex", alignItems:"center", gap:"8px", marginBottom:"4px"}}>
+                        <span style={{fontSize:"14px", fontWeight:700, color: b.result==="win" ? "#22C55E" : b.result==="loss" ? "#FF4500" : "#FFB300"}}>
+                          {b.result === "win" ? "Victory" : b.result === "loss" ? "Defeat" : "Tie"}
+                        </span>
+                        <span style={{fontSize:"11px", color:c.text2}}>{b.mode} Mode</span>
+                      </div>
+                      <div style={{fontSize:"12px", color:c.text2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                        {b.myOneliner || b.challenger_oneliner || "—"}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"center", marginLeft:"12px", flexShrink:0}}>
+                      <div style={{fontSize:"20px", fontWeight:900, color:scoreColor(b.myScore||b.challenger_score)}}>
+                        {b.myScore || b.challenger_score || "—"}<span style={{fontSize:"11px", color:c.text2}}>/10</span>
+                      </div>
+                      <div style={{fontSize:"10px", color:c.text2}}>vs {b.opponentScore || b.opponent_score || "—"}</div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          )}
+        </div>
       </div>
-      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
-    </div>
-  );
 
-  // MAIN APP
+      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
+    </div>
+    );
+  }
+
+    // MAIN APP
   return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -2393,6 +3382,27 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* B2.6 — Comeback System */}
+        {(() => {
+          if (history.length === 0) return null;
+          const lastEntry = history[0];
+          const lastDate = new Date(lastEntry?.date || lastEntry?.created_at);
+          if (isNaN(lastDate.getTime())) return null;
+          const daysSince = Math.floor((Date.now() - lastDate.getTime()) / (1000*60*60*24));
+          if (daysSince < 7) return null;
+          return (
+            <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"14px", padding:"14px 16px", marginBottom:"16px", display:"flex", alignItems:"center", gap:"12px"}}>
+              <div style={{width:"36px", height:"36px", borderRadius:"50%", background:`${c.accent}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              </div>
+              <div>
+                <div style={{fontSize:"14px", fontWeight:700, color:c.text}}>Welcome back</div>
+                <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Let's see if you've improved.</div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Mode */}
         <div style={styles.section}>
@@ -2492,13 +3502,67 @@ export default function App() {
             </div>
           ) : (
             <>
-              <textarea
-                style={styles.textarea}
-                rows={7}
-                placeholder={inputType === "💕 My Bio" ? "Paste your dating or social media bio..." : inputType === "📸 My Caption" ? "Paste the caption you're about to post..." : inputType === "💬 Should I Send This?" ? "Paste the message you're nervous about sending..." : inputType === "📄 My CV" ? "Paste your CV and brace yourself..." : "Paste anything. We'll find something."}
-                value={text}
-                onChange={e => setText(e.target.value)}
-              />
+              {(() => {
+                const challenge = getCurrentChallenge();
+
+                const basePlaceholder = inputType === "💕 My Bio" ? "Paste your dating or social media bio..."
+                  : inputType === "📸 My Caption" ? "Paste the caption you're about to post..."
+                  : inputType === "💬 Should I Send This?" ? "Paste the message you're nervous about sending..."
+                  : inputType === "📄 My CV" ? "Paste your CV and brace yourself..."
+                  : "Paste anything. We'll find something.";
+
+                return (
+                  <>
+                    {/* C1 — Weekly Challenge card */}
+                    {(history.length === 0 || inputType === "Anything") && !text && (() => {
+                      const ch = getCurrentChallenge();
+                      const cs = challengeState;
+                      const done = cs.completed;
+                      return (
+                        <div style={{background: done ? `${c.accent}08` : c.bg2, border:`1px solid ${done ? c.accent + "40" : c.border}`, borderRadius:"16px", padding:"16px 18px", marginBottom:"14px", transition:"all 0.3s"}}>
+                          {/* Header row */}
+                          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"10px"}}>
+                            <div style={{fontSize:"10px", fontWeight:700, color:c.accent, letterSpacing:"1.2px", textTransform:"uppercase"}}>This Week's Challenge</div>
+                            {done
+                              ? <div style={{fontSize:"11px", fontWeight:700, color:"#22C55E", display:"flex", alignItems:"center", gap:"4px"}}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  Completed
+                                </div>
+                              : cs.started
+                              ? <div style={{fontSize:"11px", color:c.text2}}>In progress</div>
+                              : null
+                            }
+                          </div>
+                          {/* Challenge title */}
+                          <div style={{fontSize:"16px", fontWeight:800, color:c.text, marginBottom:"5px", lineHeight:1.3}}>{ch.prompt}</div>
+                          <div style={{fontSize:"12px", color:c.text2, lineHeight:1.5, marginBottom: done ? "0" : "14px"}}>{ch.hint}</div>
+                          {/* CTA — hide when done */}
+                          {!done && (
+                            <button
+                              onClick={() => {
+                                setText(ch.prompt + ": ");
+                                markChallengeStarted();
+                                setChallengeState(getChallengeState());
+                              }}
+                              style={{background:c.accent, color:"#fff", border:"none", borderRadius:"9px", padding:"9px 18px", fontSize:"13px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:"7px"}}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                              Try this challenge
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <textarea
+                      style={styles.textarea}
+                      rows={7}
+                      placeholder={inputType === "Anything" && !text ? `${challenge.prompt}...` : basePlaceholder}
+                      value={text}
+                      onChange={e => setText(e.target.value)}
+                    />
+                  </>
+                );
+              })()}
               <div style={{fontSize:"12px", color: text.length > CHAR_LIMIT ? "#FF4500" : text.length > CHAR_LIMIT * 0.75 ? "#FFB300" : "#22C55E", marginTop:"6px", textAlign:"right", fontWeight: text.length > CHAR_LIMIT ? 700 : 400}}>
                 {text.length} / {CHAR_LIMIT} characters
                 {text.length > CHAR_LIMIT && <span> — over limit, <span style={{textDecoration:"underline", cursor:"pointer"}} onClick={() => setShowPaywall(true)}>upgrade for more</span></span>}
@@ -2603,88 +3667,147 @@ export default function App() {
 }
 
 function LoginModal({ c, dark, onClose, loginEmail, setLoginEmail }) {
-  const [showEmail, setShowEmail] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState("main"); // main | email | sent
+  const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const bg     = dark ? "#111111" : "#ffffff";
+  const border = dark ? "#2a2a2a" : "#e5e5e5";
+  const text   = dark ? "#ffffff" : "#000000";
+  const text2  = dark ? "#888888" : "#666666";
+  const input  = dark ? "#1a1a1a" : "#f5f5f5";
+
+  async function handleGoogle() {
+    setLoading(true);
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin }
+    });
+  }
+
+  async function handleEmail() {
+    if (!loginEmail || !loginEmail.includes("@")) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    setLoading(true);
+    setEmailError("");
+    const { error } = await supabase.auth.signInWithOtp({
+      email: loginEmail,
+      options: { emailRedirectTo: window.location.origin }
+    });
+    setLoading(false);
+    if (error) {
+      setEmailError("Something went wrong. Please try again.");
+    } else {
+      setStep("sent");
+    }
+  }
 
   return (
-    <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)"}}>
-      <div style={{background: dark ? "#111" : "#fff", borderRadius:"24px 24px 0 0", padding:"28px 20px 44px", width:"100%", maxWidth:"480px"}}>
-        
-        <div style={{width:"40px", height:"4px", background: dark ? "#333" : "#ddd", borderRadius:"2px", margin:"0 auto 24px"}}/>
-        
-        <div style={{textAlign:"center", marginBottom:"24px"}}>
-          <div style={{width:"52px", height:"52px", borderRadius:"50%", background:"#FF450020", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px"}}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-          </div>
-          <div style={{fontSize:"20px", fontWeight:900, color: dark ? "#fff" : "#000", marginBottom:"6px"}}>
-            Save Your Roast
-          </div>
-          <div style={{fontSize:"14px", color:"#888", lineHeight:1.5}}>
-            Get 2 more free roasts this week and keep your history forever.
-          </div>
-        </div>
+    <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)"}} onClick={e => { if(e.target === e.currentTarget) onClose(); }}>
+      <div style={{background:bg, borderRadius:"24px 24px 0 0", padding:"28px 20px 44px", width:"100%", maxWidth:"480px", boxShadow:"0 -4px 40px rgba(0,0,0,0.3)"}}>
 
-        {!showEmail ? (
-          <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"20px"}}>
+        {/* Handle bar */}
+        <div style={{width:"36px", height:"4px", background:border, borderRadius:"2px", margin:"0 auto 24px"}}/>
 
-            <button onClick={async () => {
-                await supabase.auth.signInWithOAuth({
-                  provider: "google",
-                  options: { redirectTo: window.location.origin }
-                });
-              }} style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", padding:"14px", borderRadius:"12px", border:`1px solid ${dark ? "#333" : "#ddd"}`, background: dark ? "#1A1A1A" : "#f5f5f5", color: dark ? "#fff" : "#000", fontSize:"15px", fontWeight:600, cursor:"pointer"}}>
-              <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Continue with Google
+        {step === "sent" ? (
+          /* ── EMAIL SENT STATE ── */
+          <div style={{textAlign:"center", padding:"12px 0 24px"}}>
+            <div style={{width:"64px", height:"64px", borderRadius:"50%", background:"#22C55E20", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div style={{fontSize:"22px", fontWeight:900, color:text, marginBottom:"8px"}}>Check your email</div>
+            <div style={{fontSize:"14px", color:text2, lineHeight:1.6, marginBottom:"8px"}}>
+              We sent a sign-in link to
+            </div>
+            <div style={{fontSize:"15px", fontWeight:700, color:"#FF4500", marginBottom:"20px"}}>{loginEmail}</div>
+            <div style={{fontSize:"13px", color:text2, lineHeight:1.6, padding:"12px 16px", background: dark ? "#1a1a1a" : "#f5f5f5", borderRadius:"12px", marginBottom:"24px"}}>
+              Click the link in the email to sign in. No password needed. Works for both new and existing accounts.
+            </div>
+            <button onClick={() => setStep("email")} style={{background:"none", border:"none", cursor:"pointer", fontSize:"14px", color:text2, textDecoration:"underline"}}>
+              Use a different email
             </button>
-            <button onClick={() => setShowEmail(true)} style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", padding:"14px", borderRadius:"12px", border:`1px solid ${dark ? "#333" : "#ddd"}`, background: dark ? "#1A1A1A" : "#f5f5f5", color: dark ? "#fff" : "#000", fontSize:"15px", fontWeight:600, cursor:"pointer"}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Continue with Email
+          </div>
+        ) : step === "email" ? (
+          /* ── EMAIL INPUT STATE ── */
+          <div>
+            <button onClick={() => setStep("main")} style={{background:"none", border:"none", cursor:"pointer", color:text2, fontSize:"14px", display:"flex", alignItems:"center", gap:"6px", marginBottom:"20px", padding:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
             </button>
+            <div style={{fontSize:"22px", fontWeight:900, color:text, marginBottom:"6px"}}>Enter your email</div>
+            <div style={{fontSize:"14px", color:text2, marginBottom:"24px", lineHeight:1.5}}>
+              Works for both sign in and sign up. No password needed — we'll send you a magic link.
+            </div>
+            <input
+              type="email"
+              autoFocus
+              placeholder="you@example.com"
+              value={loginEmail}
+              onChange={e => { setLoginEmail(e.target.value); setEmailError(""); }}
+              onKeyDown={e => { if (e.key === "Enter") handleEmail(); }}
+              style={{width:"100%", padding:"16px", borderRadius:"12px", border:`1.5px solid ${emailError ? "#FF4500" : border}`, background:input, color:text, fontSize:"16px", outline:"none", boxSizing:"border-box", marginBottom:"8px", fontFamily:"inherit"}}
+            />
+            {emailError && <div style={{fontSize:"13px", color:"#FF4500", marginBottom:"12px"}}>{emailError}</div>}
+            <button
+              onClick={handleEmail}
+              disabled={loading}
+              style={{width:"100%", padding:"16px", borderRadius:"12px", background:"#FF4500", color:"#fff", fontSize:"16px", fontWeight:700, border:"none", cursor:loading ? "wait" : "pointer", opacity:loading ? 0.7 : 1, marginBottom:"0"}}>
+              {loading ? "Sending..." : "Send Sign-in Link"}
+            </button>
+            <div style={{fontSize:"12px", color:text2, textAlign:"center", marginTop:"12px", lineHeight:1.5}}>
+              By continuing you agree to our Terms of Service and Privacy Policy.
+            </div>
           </div>
         ) : (
-          <div style={{marginBottom:"20px"}}>
-            {!submitted ? (
-              <>
-                <input
-                  type="email"
-                  placeholder="Enter your email..."
-                  value={loginEmail}
-                  onChange={e => setLoginEmail(e.target.value)}
-                  style={{width:"100%", padding:"14px", borderRadius:"12px", border:`1px solid ${dark ? "#333" : "#ddd"}`, background: dark ? "#1A1A1A" : "#f5f5f5", color: dark ? "#fff" : "#000", fontSize:"15px", outline:"none", boxSizing:"border-box", marginBottom:"10px", fontFamily:"inherit"}}
-                />
-                <button
-                  onClick={async () => {
-                    if (!loginEmail) return;
-                    await supabase.auth.signInWithOtp({ email: loginEmail, options: { emailRedirectTo: window.location.origin } });
-                    setSubmitted(true);
-                  }}
-                  style={{width:"100%", padding:"14px", borderRadius:"12px", background:"#FF4500", color:"#fff", fontSize:"15px", fontWeight:700, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"7px"}}>
-                  Continue
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-                </button>
-              </>
-            ) : (
-              <div style={{textAlign:"center", padding:"20px 0"}}>
-                <div style={{width:"48px", height:"48px", borderRadius:"50%", background:"#22C55E20", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px"}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                </div>
-                <div style={{fontWeight:700, color: dark ? "#fff" : "#000", marginBottom:"6px"}}>Check your email!</div>
-                <div style={{fontSize:"14px", color:"#888"}}>We sent you a magic link to sign in.</div>
+          /* ── MAIN STATE ── */
+          <div>
+            <div style={{textAlign:"center", marginBottom:"28px"}}>
+              <div style={{width:"56px", height:"56px", borderRadius:"50%", background:"#FF450015", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px"}}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
               </div>
-            )}
+              <div style={{fontSize:"24px", fontWeight:900, color:text, marginBottom:"8px"}}>Sign in to RoastMe AI</div>
+              <div style={{fontSize:"14px", color:text2, lineHeight:1.5}}>Save your history, sync across devices, and unlock your weekly roasts.</div>
+            </div>
+
+            <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"20px"}}>
+              {/* Google */}
+              <button onClick={handleGoogle} disabled={loading} style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"12px", padding:"16px", borderRadius:"14px", border:`1.5px solid ${border}`, background:input, color:text, fontSize:"16px", fontWeight:600, cursor:"pointer", transition:"opacity 0.2s"}}>
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                Continue with Google
+              </button>
+
+              {/* Divider */}
+              <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
+                <div style={{flex:1, height:"1px", background:border}}/>
+                <span style={{fontSize:"13px", color:text2}}>or</span>
+                <div style={{flex:1, height:"1px", background:border}}/>
+              </div>
+
+              {/* Email */}
+              <button onClick={() => setStep("email")} style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"12px", padding:"16px", borderRadius:"14px", border:`1.5px solid ${border}`, background:input, color:text, fontSize:"16px", fontWeight:600, cursor:"pointer"}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Continue with Email
+              </button>
+            </div>
+
+            <div style={{fontSize:"12px", color:text2, textAlign:"center", lineHeight:1.5, marginBottom:"20px"}}>
+              New here? Just sign in — an account is created automatically.
+            </div>
+
+            {/* Skip */}
+            <button onClick={onClose} style={{width:"100%", background:"none", border:`1px solid ${border}`, borderRadius:"12px", cursor:"pointer", padding:"12px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", color:text2, fontSize:"14px", fontWeight:500}}>
+              Continue without signing in
+            </button>
+            <div style={{fontSize:"12px", color:text2, textAlign:"center", marginTop:"8px"}}>Your roasts won't be saved between sessions</div>
           </div>
         )}
-
-        <div style={{textAlign:"center", marginBottom:"16px"}}>
-          <span style={{fontSize:"13px", color:"#888"}}>Already have an account? </span>
-          <span style={{fontSize:"13px", color:"#FF4500", fontWeight:600, cursor:"pointer"}}>Sign in</span>
-        </div>
-
-        <button onClick={onClose} style={{width:"100%", background:"none", border:"none", cursor:"pointer", padding:"8px"}}>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", fontSize:"13px", color:"#888"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Skip — my roast history won't be saved
-          </div>
-        </button>
-
       </div>
     </div>
   );
@@ -2829,6 +3952,7 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect }) {
           Your payment information is always secure and encrypted.
         </div>
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 }
