@@ -294,6 +294,45 @@ function BottomNav({ screen, setScreen, dark, c, hasNewResult }) {
   );
 }
 
+
+// ─── Reusable screen components ─────────────────────────
+function EmptyState({ icon, title, sub, cta, onCta, styles, c }) {
+  return (
+    <div style={{textAlign:"center", padding:"48px 24px"}}>
+      <div style={{width:"64px", height:"64px", borderRadius:"50%", background:`${c.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
+        {icon}
+      </div>
+      <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{title}</div>
+      <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"24px", maxWidth:"260px", margin:"0 auto 24px"}}>{sub}</div>
+      {cta && <button onClick={onCta} style={{...styles.btn, padding:"13px 28px", fontSize:"15px"}}>{cta}</button>}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, sub, c }) {
+  return (
+    <div style={{background:c.bg3, borderRadius:"14px", padding:"14px 12px", textAlign:"center"}}>
+      <div style={{fontSize:"26px", fontWeight:900, color: color || c.accent, lineHeight:1}}>{value ?? "—"}</div>
+      {sub && <div style={{fontSize:"10px", color:color||c.accent, fontWeight:700, marginTop:"2px", opacity:0.8}}>{sub}</div>}
+      <div style={{fontSize:"11px", color:c.text2, marginTop:"4px"}}>{label}</div>
+    </div>
+  );
+}
+
+function Metric({ label, value, c, BAR_COLOR }) {
+  return (
+    <div style={{marginBottom:"14px"}}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"6px"}}>
+        <span style={{fontSize:"13px", color:c.text2, fontWeight:500}}>{label}</span>
+        <span style={{fontSize:"14px", fontWeight:800, color:BAR_COLOR(value)}}>{value}</span>
+      </div>
+      <div style={{height:"3px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
+        <div style={{height:"100%", width:`${(value/10)*100}%`, background:BAR_COLOR(value), borderRadius:"2px", transition:"width 0.8s ease"}}/>
+      </div>
+    </div>
+  );
+}
+
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError() { return { hasError: true }; }
@@ -1838,13 +1877,7 @@ export default function App() {
       }
     };
 
-    const StatCard = ({label, value, color, sub}) => (
-      <div style={{background:c.bg3, borderRadius:"14px", padding:"14px 12px", textAlign:"center"}}>
-        <div style={{fontSize:"26px", fontWeight:900, color: color || c.accent, lineHeight:1}}>{value ?? "—"}</div>
-        {sub && <div style={{fontSize:"10px", color:color||c.accent, fontWeight:700, marginTop:"2px", opacity:0.8}}>{sub}</div>}
-        <div style={{fontSize:"11px", color:c.text2, marginTop:"4px"}}>{label}</div>
-      </div>
-    );
+
 
     return (
     <div style={{...styles.app, paddingBottom:"80px"}}>
@@ -1979,16 +2012,16 @@ export default function App() {
 
             {/* Stats grid */}
             <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px", marginBottom:"12px"}}>
-              <StatCard label="Roasts" value={history.length} color={c.accent}/>
-              <StatCard label="Avg Score" value={avgScore ? `${avgScore}` : null} color={avgScore ? sc(avgScore) : c.text2}/>
-              <StatCard label="Best Score" value={bestScore ? `${bestScore}` : null} color={bestScore ? sc(bestScore) : c.text2}/>
+              <StatCard c={c} label="Roasts" value={history.length} color={c.accent}/>
+              <StatCard c={c} label="Avg Score" value={avgScore ? `${avgScore}` : null} color={avgScore ? sc(avgScore) : c.text2}/>
+              <StatCard c={c} label="Best Score" value={bestScore ? `${bestScore}` : null} color={bestScore ? sc(bestScore) : c.text2}/>
             </div>
 
             {/* Battle stats */}
             {battleHistory.length > 0 && (
               <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"12px"}}>
-                <StatCard label="Battle Rank" value={rank.name} color={rankColor}/>
-                <StatCard label="Win Streak" value={streak >= 1 ? `${streak}` : "0"} sub={streak>=3?"On fire":null} color={streak>=3?c.accent:c.text2}/>
+                <StatCard c={c} label="Battle Rank" value={rank.name} color={rankColor}/>
+                <StatCard c={c} label="Win Streak" value={streak >= 1 ? `${streak}` : "0"} sub={streak>=3?"On fire":null} color={streak>=3?c.accent:c.text2}/>
               </div>
             )}
           </div>
@@ -2756,17 +2789,6 @@ export default function App() {
   // HISTORY — Tabs: Roasts + Battles
   if (screen === "history") {
 
-    const EmptyState = ({ icon, title, sub, cta, onCta }) => (
-      <div style={{textAlign:"center", padding:"48px 24px"}}>
-        <div style={{width:"64px", height:"64px", borderRadius:"50%", background:`${c.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px"}}>
-          {icon}
-        </div>
-        <div style={{fontSize:"18px", fontWeight:800, color:c.text, marginBottom:"8px"}}>{title}</div>
-        <div style={{fontSize:"14px", color:c.text2, lineHeight:1.6, marginBottom:"24px", maxWidth:"260px", margin:"0 auto 24px"}}>{sub}</div>
-        {cta && <button onClick={onCta} style={{...styles.btn, padding:"13px 28px", fontSize:"15px"}}>{cta}</button>}
-      </div>
-    );
-
     return (
     <div style={styles.app}>
       <div style={{maxWidth:"480px", margin:"0 auto"}}>
@@ -2823,17 +2845,7 @@ export default function App() {
             : val >= 5  ? "#FFB300"
             : "#FF4500";
 
-          const Metric = ({ label, value }) => (
-            <div style={{marginBottom:"14px"}}>
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"6px"}}>
-                <span style={{fontSize:"13px", color:c.text2, fontWeight:500}}>{label}</span>
-                <span style={{fontSize:"14px", fontWeight:800, color:BAR_COLOR(value)}}>{value}</span>
-              </div>
-              <div style={{height:"3px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
-                <div style={{height:"100%", width:`${(value/10)*100}%`, background:BAR_COLOR(value), borderRadius:"2px", transition:"width 0.8s ease"}}/>
-              </div>
-            </div>
-          );
+
 
           return (
             <div style={{margin:"16px 20px 0", background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"18px", padding:"20px 20px 6px"}}>
@@ -2863,10 +2875,10 @@ export default function App() {
               </div>
 
               {/* Metrics */}
-              <Metric label="Confidence"   value={scores_c2.confidence} />
-              <Metric label="Clarity"      value={scores_c2.clarity} />
-              <Metric label="Authenticity" value={scores_c2.authenticity} />
-              <Metric label="Persuasion"   value={scores_c2.persuasion} />
+              <Metric c={c} BAR_COLOR={BAR_COLOR} label="Confidence"   value={scores_c2.confidence} />
+              <Metric c={c} BAR_COLOR={BAR_COLOR} label="Clarity"      value={scores_c2.clarity} />
+              <Metric c={c} BAR_COLOR={BAR_COLOR} label="Authenticity" value={scores_c2.authenticity} />
+              <Metric c={c} BAR_COLOR={BAR_COLOR} label="Persuasion"   value={scores_c2.persuasion} />
 
               <div style={{fontSize:"11px", color:c.text2, marginTop:"4px", marginBottom:"14px", opacity:0.6}}>
                 Based on {allScores.length} roast{allScores.length===1?"":"s"} · Updates with every result
@@ -3221,7 +3233,7 @@ export default function App() {
         <div style={{padding:"12px 20px 100px"}}>
           {histTab === "roasts" ? (
             history.length === 0 ? (
-              <EmptyState
+              <EmptyState styles={styles} c={c}
                 icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>}
                 title="Start your first roast"
                 sub={user ? "Your progress will appear here. Start your first roast." : "Sign in to save your history and track your progress across devices."}
@@ -3334,7 +3346,7 @@ export default function App() {
             )
           ) : (
             battleHistory.length === 0 ? (
-              <EmptyState
+              <EmptyState styles={styles} c={c}
                 icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>}
                 title="No battles yet"
                 sub="Challenge someone and start climbing."
@@ -3968,3 +3980,4 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeE
     </div>
   );
 }
+        
