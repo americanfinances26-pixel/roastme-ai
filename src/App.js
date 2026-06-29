@@ -449,10 +449,12 @@ export default function App() {
 
   // ── Stripe helpers ──────────────────────────────────────────
   const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
 
   async function handleUpgrade(planId) {
     if (!user) { setShowLogin(true); return; }
     setUpgrading(true);
+    setUpgradeError("");
     try {
       const res = await apiCall("/api/stripe/checkout", {
         method: "POST",
@@ -460,7 +462,6 @@ export default function App() {
       });
       const data = await res.json();
       if (data.type === "checkout" && data.url) {
-        // Keep upgrading=true — user is being redirected to Stripe
         window.location.href = data.url;
       } else if (data.type === "updated") {
         setPlan(data.plan);
@@ -468,12 +469,12 @@ export default function App() {
         setPaywallPreselect(null);
         setUpgrading(false);
       } else {
-        console.error("Checkout error:", data.error);
         setUpgrading(false);
+        setUpgradeError(data.error || "Payments not configured yet. Coming soon.");
       }
     } catch(e) {
-      console.error("Upgrade failed:", e);
       setUpgrading(false);
+      setUpgradeError("Payments not configured yet. Coming soon.");
     }
   }
 
@@ -1787,7 +1788,7 @@ export default function App() {
 
       </div>
 
-      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); setUpgradeError(""); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
       <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
@@ -2076,7 +2077,7 @@ export default function App() {
 
       </div>
 
-      {showPaywall && <Paywall c={c} onClose={()=>{setShowPaywall(false);setPaywallPreselect(null);}} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showPaywall && <Paywall c={c} onClose={()=>{setShowPaywall(false);setPaywallPreselect(null);setUpgradeError("");}} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
       {showLogin && <LoginModal c={c} dark={dark} onClose={()=>setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
 
       {/* Logout confirm */}
@@ -3382,7 +3383,7 @@ export default function App() {
         </div>
       </div>
 
-      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); setUpgradeError(""); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
       {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
       <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
@@ -3666,7 +3667,7 @@ export default function App() {
         </div>
       </div>
 
-      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect}/>}
+      {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); setUpgradeError(""); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
       {showLogin && <LoginModal c={c} dark={dark} onClose={() => setShowLogin(false)} loginEmail={loginEmail} setLoginEmail={setLoginEmail}/>}
     </div>
   );
@@ -3819,7 +3820,7 @@ function LoginModal({ c, dark, onClose, loginEmail, setLoginEmail }) {
   );
 }
 
-function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect }) {
+function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeError }) {
   const planIconPaths = {
     free: ["M3 8h18a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z","M12 8v13","M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7","M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8","M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"],
     fired_up: ["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"],
@@ -3936,6 +3937,11 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect }) {
         )}
 
         <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px", marginTop:"16px", paddingTop:"16px", borderTop:`1px solid ${dark ? "#2A2A2A" : "#E5E5E5"}`, marginBottom:"16px"}}>
+          {upgradeError && (
+            <div style={{margin:"0 0 16px", padding:"12px 16px", background:"#FF450015", border:"1px solid #FF450040", borderRadius:"12px", fontSize:"13px", color:"#FF4500", fontWeight:600, textAlign:"center"}}>
+              {upgradeError}
+            </div>
+          )}
           {trustItems.map((t,i) => (
             <div key={i} style={{textAlign:"center"}}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:"6px"}}>
