@@ -41,8 +41,7 @@ export default async function handler(req, res) {
     .from("profiles")
     .select("plan, stripe_customer_id, stripe_subscription_id, stripe_subscription_status")
     .eq("id", user.id)
-    .single()
-    .catch(() => ({ data: null }));
+    .maybeSingle();
 
   // Get or create Stripe customer
   let customerId = profile?.stripe_customer_id;
