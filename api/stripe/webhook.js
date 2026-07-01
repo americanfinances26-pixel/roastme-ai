@@ -28,13 +28,33 @@ async function getRawBody(req) {
   });
 }
 
-async function getUserIdFromCustomer(supabase, customerId) {
+async function getUserIdFromCustomer(supabase, customerId, metadata) {
+  // Try by stripe_customer_id first
   const { data } = await supabase
     .from("profiles")
     .select("id, plan")
     .eq("stripe_customer_id", customerId)
-    .single();
-  return data;
+    .maybeSingle();
+  if (data) return data;
+
+  // Fallback: find by supabase_user_id in metadata
+  const userId = metadata?.supabase_user_id;
+  if (!userId) return null;
+
+  const { data: profileById } = await supabase
+    .from("profiles")
+    .select("id, plan")
+    .eq("id", userId)
+    .maybeSingle();
+
+  // Save customer_id for future lookups
+  if (profileById) {
+    await supabase.from("profiles")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", userId);
+  }
+
+  return profileById;
 }
 
 async function handleSubscriptionChange(supabase, subscription, eventId, reason) {
@@ -49,7 +69,7 @@ async function handleSubscriptionChange(supabase, subscription, eventId, reason)
     .from("subscription_events")
     .select("id")
     .eq("stripe_event_id", eventId)
-    .single();
+    .maybeSingle();
   if (existing) return; // already processed
 
   // Update profile
@@ -91,7 +111,7 @@ async function handleSubscriptionDeleted(supabase, subscription, eventId) {
     .from("subscription_events")
     .select("id")
     .eq("stripe_event_id", eventId)
-    .single();
+    .maybeSingle();
   if (existing) return;
 
   const oldPlan = profile.plan;
@@ -129,7 +149,7 @@ async function handlePaymentFailed(supabase, invoice, eventId) {
     .from("subscription_events")
     .select("id")
     .eq("stripe_event_id", eventId)
-    .single();
+    .maybeSingle();
   if (existing) return;
 
   await supabase.from("profiles").update({
