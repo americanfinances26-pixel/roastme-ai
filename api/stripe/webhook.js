@@ -77,9 +77,13 @@ async function handleSubscriptionChange(supabase, subscription, eventId, reason)
     plan:                       newPlan,
     stripe_subscription_id:     subscription.id,
     stripe_subscription_status: subscription.status,
-    stripe_current_period_end:  new Date(subscription.current_period_end * 1000).toISOString(),
+    stripe_current_period_end:  subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null,
     cancel_at_period_end:       subscription.cancel_at_period_end || false,
-    billing_start:              new Date(subscription.current_period_start * 1000).toISOString(),
+    billing_start:              subscription.current_period_start
+      ? new Date(subscription.current_period_start * 1000).toISOString()
+      : null,
   }).eq("id", profile.id);
 
   // Log event with idempotency key
