@@ -3981,7 +3981,6 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeE
           Your payment information is always secure and encrypted.
         </div>
       </div>
-      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 }
