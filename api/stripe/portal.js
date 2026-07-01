@@ -1,6 +1,5 @@
 // POST /api/stripe/portal
-// Creates a Stripe Billing Portal session for subscription management.
-// User can cancel, update payment method, view invoices.
+// Creates a Stripe Customer Portal session for managing subscriptions.
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -15,26 +14,29 @@ export default async function handler(req, res) {
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) return res.status(401).json({ error: "Invalid token" });
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("stripe_customer_id")
     .eq("id", user.id)
-    .single();
+    .single()
+    .catch(() => ({ data: null }));
 
   if (!profile?.stripe_customer_id) {
-    return res.status(400).json({ error: "No billing account found" });
+    return res.status(400).json({ error: "No billing account found. Please upgrade first." });
   }
 
-  const appUrl = process.env.APP_URL || "https://roastmeai.vercel.app";
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer:   profile.stripe_customer_id,
-    return_url: `${appUrl}/account`,
+  const appUrl = process.env.APP_URL || "https://roastme-ai26.vercel.app";
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: profile.stripe_customer_id,
+    return_url: `${appUrl}/`,
   });
 
-  return res.status(200).json({ url: portalSession.url });
+  return res.status(200).json({ url: session.url });
 }
