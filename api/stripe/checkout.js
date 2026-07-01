@@ -51,8 +51,10 @@ export default async function handler(req, res) {
       metadata: { supabase_user_id: user.id },
     });
     customerId = customer.id;
-    await supabase.from("profiles")
+    console.log("CHECKOUT: saving customer_id", customerId, "for user", user.id);
+    const { error: upsertError } = await supabase.from("profiles")
       .upsert({ id: user.id, stripe_customer_id: customerId, plan: "free" }, { onConflict: "id" });
+    console.log("CHECKOUT: upsert error", upsertError);
   }
 
   // If active subscription exists — update (upgrade/downgrade with prorate)
