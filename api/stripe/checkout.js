@@ -41,7 +41,8 @@ export default async function handler(req, res) {
     .from("profiles")
     .select("plan, stripe_customer_id, stripe_subscription_id, stripe_subscription_status")
     .eq("id", user.id)
-    .single();
+    .single()
+    .catch(() => ({ data: null }));
 
   // Get or create Stripe customer
   let customerId = profile?.stripe_customer_id;
@@ -89,7 +90,7 @@ export default async function handler(req, res) {
   }
 
   // New subscription — Stripe Checkout
-  const appUrl = process.env.APP_URL || "https://roastmeai.vercel.app";
+  const appUrl = process.env.APP_URL || "https://roastme-ai26.vercel.app";
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
