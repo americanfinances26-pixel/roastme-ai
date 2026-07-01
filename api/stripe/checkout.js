@@ -52,8 +52,7 @@ export default async function handler(req, res) {
     });
     customerId = customer.id;
     await supabase.from("profiles")
-      .update({ stripe_customer_id: customerId })
-      .eq("id", user.id);
+      .upsert({ id: user.id, stripe_customer_id: customerId, plan: "free" }, { onConflict: "id" });
   }
 
   // If active subscription exists — update (upgrade/downgrade with prorate)
