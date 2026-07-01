@@ -1333,7 +1333,6 @@ export default function App() {
           </div>
         </div>
       </div>
-      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 
@@ -2135,7 +2134,12 @@ export default function App() {
               <div style={{fontSize:"18px",fontWeight:800,color:"#FF4500",marginBottom:"8px"}}>Delete Account?</div>
               <div style={{fontSize:"14px",color:c.text2,lineHeight:1.6}}>This permanently deletes your account, roasts, and all data. Cannot be undone.</div>
             </div>
-            <button onClick={async()=>{try{await supabase.from("profiles").delete().eq("id",user.id);}catch{}clearUserState();}} style={{width:"100%",padding:"16px",borderRadius:"12px",border:"none",background:"#FF4500",color:"#fff",fontWeight:700,fontSize:"16px",cursor:"pointer",marginBottom:"10px"}}>Delete Everything</button>
+            <button onClick={async()=>{
+              try {
+                await apiCall("/api/account/delete", { method:"DELETE" });
+              } catch(e) {}
+              clearUserState();
+            }} style={{width:"100%",padding:"16px",borderRadius:"12px",border:"none",background:"#FF4500",color:"#fff",fontWeight:700,fontSize:"16px",cursor:"pointer",marginBottom:"10px"}}>Delete Everything</button>
             <button onClick={()=>setShowDeleteConfirm(false)} style={{width:"100%",padding:"16px",borderRadius:"12px",border:`1px solid ${c.border}`,background:"none",color:c.text,fontWeight:600,fontSize:"15px",cursor:"pointer"}}>Keep My Account</button>
           </div>
         </div>
@@ -3840,9 +3844,9 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeE
     brutal: ["M12 2C7 2 4 5.5 4 10c0 3 1.5 5 3 6.5V19a1 1 0 0 0 1 1h1v1.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V20h2v1.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V20h1a1 1 0 0 0 1-1v-2.5c1.5-1.5 3-3.5 3-6.5 0-4.5-3-8-8-8Z","M9 10m-1.3 0a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0","M15 10m-1.3 0a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0","M12 12.5v2"],
   };
   const plans = [
-    { id:"free", name:"Free", price:"", period:"", features:["5 roasts/week","600 characters per roast","All 4 modes","Shareable card with watermark","Battle Mode"] },
-    { id:"fired_up", name:"Fired Up", popular:true, price:"$2.99", period:"/month", features:["Unlimited roasts","2,000 characters per roast","The Fix — we rewrite it for you","Clean card — no watermark","Full roast history","Battle History — track your wins","Weekly Summary"] },
-    { id:"brutal", name:"Brutal", price:"$5.99", period:"/month", features:["Everything in Fired Up","4,000 characters per roast","Deep Roast — 7 detailed problems + 7 fixes","5 Intensity Levels — Mild to Obliterate","Progress Tracking","Hall of Fame link","Brutal badge on share card","Leaderboard"] },
+    { id:"free", name:"Free", price:"", period:"", features:["AI Roast Feedback","5 roasts per week","Battle Mode"] },
+    { id:"fired_up", name:"Fired Up", popular:true, price:"$2.99", period:"/month", features:["Unlimited Roasts","The Fix — AI rewrites your exact text","Communication Score","Progress Tracking","Full Roast History","Battle History & Performance"] },
+    { id:"brutal", name:"Brutal", price:"$5.99", period:"/month", features:["Everything in Fired Up","Deep Roast — 7 Problems + 7 Fixes","All 5 Intensity Levels","Advanced Communication Insights","Hall of Fame","Brutal Badge on Share Card"] },
   ];
   const isPaidUser = currentPlan === "fired_up" || currentPlan === "brutal";
 
@@ -3977,6 +3981,7 @@ function Paywall({ c, onClose, onUpgrade, dark, currentPlan, preselect, upgradeE
           Your payment information is always secure and encrypted.
         </div>
       </div>
+      <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
   );
 }
