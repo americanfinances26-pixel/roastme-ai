@@ -1,7 +1,5 @@
 // GET /api/challenges/get?id=UUID
-// Returns challenge data for display in battle-intro screen.
-// Public endpoint — no auth required (anyone with the link can view).
-// Validates: exists, not expired, status=pending.
+// Returns a challenge by UUID. Public endpoint — no auth required.
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -9,9 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { id } = req.query;
-  if (!id || !/^[0-9a-f-]{36}$/.test(id)) {
-    return res.status(400).json({ error: "Invalid challenge ID" });
-  }
+  if (!id) return res.status(400).json({ error: "Missing challenge ID" });
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -20,7 +16,7 @@ export default async function handler(req, res) {
 
   const { data: challenge, error } = await supabase
     .from("challenges")
-    .select("id, challenger_score, challenger_oneliner, mode, input_type, status, expires_at, view_count, accept_count")
+    .select("id, score, oneliner, mode, input_type, expires_at, created_at")
     .eq("id", id)
     .single();
 
@@ -28,30 +24,10 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: "Challenge not found" });
   }
 
-  if (challenge.status !== "pending") {
-    return res.status(410).json({ error: "Challenge already accepted or expired" });
-  }
-
-  if (new Date(challenge.expires_at) < new Date()) {
-    // Mark as expired
-    await supabase.from("challenges").update({ status: "expired" }).eq("id", id);
+  // Check expiry
+  if (challenge.expires_at && new Date(challenge.expires_at) < new Date()) {
     return res.status(410).json({ error: "Challenge has expired" });
   }
 
-  // Increment view count (non-blocking)
-  supabase.from("challenges")
-    .update({ view_count: challenge.view_count + 1 })
-    .eq("id", id)
-    .then(() => {});
-
-  return res.status(200).json({
-    challenge: {
-      id:                  challenge.id,
-      score:               challenge.challenger_score,
-      oneliner:            challenge.challenger_oneliner,
-      mode:                challenge.mode,
-      inputType:           challenge.input_type,
-      expiresAt:           challenge.expires_at,
-    }
-  });
+  return res.status(200).json({ challenge });
 }
