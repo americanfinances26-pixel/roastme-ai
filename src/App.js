@@ -1595,6 +1595,15 @@ export default function App() {
 
         {/* Action buttons — 3 max, clear hierarchy */}
         <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"32px"}}>
+          {/* Hall of Fame — Brutal only, above share */}
+          {plan === "brutal" && (
+            <button onClick={() => setScreen("halloffame-hub")}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"13px",borderRadius:"12px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,fontSize:"14px",cursor:"pointer",marginBottom:"4px"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 5H4.5a2.5 2.5 0 0 0 0 5H7"/></svg>
+              Add to Hall of Fame
+            </button>
+          )}
+
           {/* PRIMARY: Share */}
           <button style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", fontSize:"16px", padding:"17px"}} onClick={shareRoast}>
             {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
@@ -1603,31 +1612,11 @@ export default function App() {
             </>)}
           </button>
 
-          {/* SECONDARY: Roast Again + Challenge side by side */}
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px"}}>
-            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-              Roast Again
-            </button>
-            <button style={{...styles.btnOutline, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px", background:`${c.accent}15`, borderColor:`${c.accent}40`, color:c.accent}} onClick={async () => {
-              // Quick challenge — same as full challenge button below
-              const baseUrl = window.location.href.split('?')[0];
-              let link;
-              if (user && result?.supabaseRoastId) {
-                try {
-                  const res = await apiCall("/api/challenges/create", { method:"POST", body:JSON.stringify({ roastId:result.supabaseRoastId, score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }) });
-                  const data = await res.json();
-                  if (data.challengeId) link = `${baseUrl}?challenge=${data.challengeId}`;
-                } catch(e) {}
-              }
-              if (!link) link = `${baseUrl}?battle=${encodeURIComponent(JSON.stringify({ score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }))}`;
-              if (navigator.share) { try { await navigator.share({ title:"Can you beat my RoastMe score?", url:link }); } catch(e) { await navigator.clipboard.writeText(link); setShareMsg("Copied!"); setTimeout(()=>setShareMsg(""),2000); } }
-              else { await navigator.clipboard.writeText(link); setShareMsg("Challenge link copied!"); setTimeout(()=>setShareMsg(""),2500); }
-            }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>
-              Challenge
-            </button>
-          </div>
+          {/* SECONDARY: Roast Again — full width */}
+          <button style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            Roast Again
+          </button>
 
           {/* Challenge button — full width, distinct style — REMOVED: merged above */}
           <button style={{width:"100%", padding:"14px", borderRadius:"14px", border:"none", cursor:"pointer", fontSize:"14px", fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #FF4500, #B91C1C)", boxShadow:"0 4px 16px rgba(255,69,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={async () => {
@@ -2035,44 +2024,73 @@ export default function App() {
         <div style={{padding:"20px 20px 0"}}>
           <div style={{fontSize:"10px", fontWeight:700, color:c.text2, letterSpacing:"1.2px", textTransform:"uppercase", marginBottom:"14px"}}>Plan</div>
           <div style={{background:c.bg2, border:`1px solid ${c.border}`, borderRadius:"16px", overflow:"hidden"}}>
+            {/* Current plan row */}
             <div style={{padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
               <div>
                 <div style={{fontSize:"15px", fontWeight:700, color:c.text}}>
-                  {plan==="free"?"Free Plan":plan==="fired_up"?"Fired Up — $2.99/mo":"Brutal — $5.99/mo"}
+                  {plan==="free"?"Free Plan":plan==="fired_up"?"Fired Up":"Brutal"}
                 </div>
                 <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>
-                  {plan==="free" ? "5 roasts per week" :
-                   billingProfile?.stripe_current_period_end ?
-                   `Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}` :
-                   "Active subscription"}
+                  {plan==="free" ? "5 roasts per week · Free forever" :
+                   plan==="fired_up" ? "$2.99/mo" : "$5.99/mo"}
+                  {plan!=="free" && billingProfile?.stripe_current_period_end &&
+                    ` · Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}`}
                 </div>
               </div>
               {plan==="free"
                 ? <button onClick={()=>setShowPaywall(true)} style={{background:c.accent,color:"#fff",border:"none",borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:700,cursor:"pointer"}}>Upgrade</button>
-                : <button onClick={()=>setShowCancelConfirm(s=>!s)} style={{background:"none",color:c.text2,border:`1px solid ${c.border}`,borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Manage</button>
+                : <button onClick={()=>setShowCancelConfirm(s=>!s)} style={{background:"none",color:c.text2,border:`1px solid ${c.border}`,borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>{showCancelConfirm ? "Close" : "Manage"}</button>
               }
             </div>
+
+            {/* Manage panel — no Paywall, clean options */}
             {showCancelConfirm && plan !== "free" && (
-              <div style={{padding:"14px 16px", borderTop:`1px solid ${c.border}`, display:"flex", flexDirection:"column", gap:"8px"}}>
-                {plan === "brutal" && (
-                  <button onClick={()=>{setShowPaywall(true);setPaywallPreselect("fired_up");setShowCancelConfirm(false);}}
-                    style={{width:"100%",padding:"12px",borderRadius:"10px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
-                    Downgrade to Fired Up — $2.99/mo
-                  </button>
-                )}
+              <div style={{borderTop:`1px solid ${c.border}`, padding:"14px 16px", display:"flex", flexDirection:"column", gap:"8px"}}>
+
+                {/* Upgrade option — only for Fired Up */}
                 {plan === "fired_up" && (
-                  <button onClick={()=>{setShowPaywall(true);setPaywallPreselect("brutal");setShowCancelConfirm(false);}}
-                    style={{width:"100%",padding:"12px",borderRadius:"10px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
-                    Upgrade to Brutal — $5.99/mo
-                  </button>
+                  <div style={{background:c.bg3, borderRadius:"12px", padding:"14px", marginBottom:"4px"}}>
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"10px"}}>
+                      <div>
+                        <div style={{fontSize:"14px", fontWeight:800, color:c.text}}>Brutal — $5.99/mo</div>
+                        <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>Everything you have, plus:</div>
+                      </div>
+                    </div>
+                    {["Deep Roast — 7 Problems + 7 Fixes","All 5 Intensity Levels","Advanced Communication Insights","Hall of Fame","Brutal Badge on Share Card"].map((f,i) => (
+                      <div key={i} style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"4px"}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span style={{fontSize:"12px", color:c.text2}}>{f}</span>
+                      </div>
+                    ))}
+                    <button onClick={async()=>{setShowCancelConfirm(false);await handleUpgrade("brutal");}}
+                      style={{width:"100%",marginTop:"12px",padding:"11px",borderRadius:"9px",background:c.accent,color:"#fff",border:"none",fontWeight:700,cursor:"pointer",fontSize:"13px"}}>
+                      Upgrade to Brutal
+                    </button>
+                  </div>
                 )}
+
+                {/* Downgrade option — only for Brutal */}
+                {plan === "brutal" && (
+                  <div style={{background:c.bg3, borderRadius:"12px", padding:"14px", marginBottom:"4px"}}>
+                    <div style={{fontSize:"14px", fontWeight:800, color:c.text, marginBottom:"4px"}}>Downgrade to Fired Up — $2.99/mo</div>
+                    <div style={{fontSize:"12px", color:c.text2, marginBottom:"10px"}}>You'll lose access to:</div>
+                    {["Deep Roast (7 Problems + 7 Fixes)","All Intensity Levels","Hall of Fame","Brutal Badge on Share Card"].map((f,i) => (
+                      <div key={i} style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"4px"}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span style={{fontSize:"12px", color:c.text2}}>{f}</span>
+                      </div>
+                    ))}
+                    <button onClick={async()=>{setShowCancelConfirm(false);await handleUpgrade("fired_up");}}
+                      style={{width:"100%",marginTop:"12px",padding:"11px",borderRadius:"9px",background:"none",color:c.text,border:`1px solid ${c.border}`,fontWeight:600,cursor:"pointer",fontSize:"13px"}}>
+                      Switch to Fired Up
+                    </button>
+                  </div>
+                )}
+
+                {/* Cancel */}
                 <button onClick={()=>{handleOpenPortal();setShowCancelConfirm(false);}}
-                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:"none",border:`1px solid ${c.border}`,color:c.text,fontWeight:600,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
+                  style={{width:"100%",padding:"11px",borderRadius:"9px",background:"none",border:"none",color:"#FF4500",fontWeight:600,cursor:"pointer",fontSize:"13px"}}>
                   Cancel subscription
-                </button>
-                <button onClick={()=>setShowCancelConfirm(false)}
-                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:"none",border:"none",color:c.text2,fontWeight:600,cursor:"pointer",fontSize:"13px"}}>
-                  Keep my plan
                 </button>
               </div>
             )}
