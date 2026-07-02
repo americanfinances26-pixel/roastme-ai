@@ -101,14 +101,18 @@ export default async function handler(req, res) {
   const { text, mode, intensity = "savage", inputType } = req.body;
   // Read plan from Supabase JWT
   let plan = "free";
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const authHeader = req.headers.authorization?.replace("Bearer ", "");
-  if (authHeader) {
-    const { data: { user } } = await supabase.auth.getUser(authHeader);
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
-      if (profile?.plan) plan = profile.plan;
+  try {
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const authHeader = req.headers.authorization?.replace("Bearer ", "");
+    if (authHeader) {
+      const { data } = await supabase.auth.getUser(authHeader);
+      if (data?.user) {
+        const { data: profile } = await supabase.from("profiles").select("plan").eq("id", data.user.id).maybeSingle();
+        if (profile?.plan) plan = profile.plan;
+      }
     }
+  } catch(e) {
+    plan = "free"; // fallback on any error
   }
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
