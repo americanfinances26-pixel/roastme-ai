@@ -390,6 +390,7 @@ export default function App() {
   const [username, setUsername] = useState(() => getStoredData()?.username || "");
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
+  const [billingProfile, setBillingProfile] = useState(null);
   const [mainGoal, setMainGoal] = useState(() => getStoredData()?.mainGoal || "");
   const [profession, setProfession] = useState(() => getStoredData()?.profession || "");
   const [avatarColor, setAvatarColor] = useState(() => getStoredData()?.avatarColor || "#FF4500");
@@ -643,6 +644,7 @@ export default function App() {
           if (profile.main_goal) setMainGoal(profile.main_goal);
           if (profile.profession) setProfession(profile.profession);
           if (profile.avatar_color) setAvatarColor(profile.avatar_color);
+          setBillingProfile(profile);
           await runMigrationIfNeeded(profile);
         }
       }
@@ -660,6 +662,7 @@ export default function App() {
           setPlanState(effectivePlan);
           savePlan(effectivePlan);
           if (profile.display_name) setDisplayName(profile.display_name);
+          setBillingProfile(profile);
           await runMigrationIfNeeded(profile);
         }
       } else {
@@ -2038,23 +2041,38 @@ export default function App() {
                   {plan==="free"?"Free Plan":plan==="fired_up"?"Fired Up — $2.99/mo":"Brutal — $5.99/mo"}
                 </div>
                 <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>
-                  {plan==="free"?"5 roasts per week":"Active subscription"}
+                  {plan==="free" ? "5 roasts per week" :
+                   billingProfile?.stripe_current_period_end ?
+                   `Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}` :
+                   "Active subscription"}
                 </div>
               </div>
               {plan==="free"
                 ? <button onClick={()=>setShowPaywall(true)} style={{background:c.accent,color:"#fff",border:"none",borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:700,cursor:"pointer"}}>Upgrade</button>
-                : <button onClick={()=>setShowCancelConfirm(true)} style={{background:"none",color:c.text2,border:`1px solid ${c.border}`,borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Manage</button>
+                : <button onClick={()=>setShowCancelConfirm(s=>!s)} style={{background:"none",color:c.text2,border:`1px solid ${c.border}`,borderRadius:"8px",padding:"7px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Manage</button>
               }
             </div>
-            {showCancelConfirm && (
-              <div style={{padding:"14px 16px", borderTop:`1px solid ${c.border}`}}>
+            {showCancelConfirm && plan !== "free" && (
+              <div style={{padding:"14px 16px", borderTop:`1px solid ${c.border}`, display:"flex", flexDirection:"column", gap:"8px"}}>
+                {plan === "brutal" && (
+                  <button onClick={()=>{setShowPaywall(true);setPaywallPreselect("fired_up");setShowCancelConfirm(false);}}
+                    style={{width:"100%",padding:"12px",borderRadius:"10px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
+                    Downgrade to Fired Up — $2.99/mo
+                  </button>
+                )}
+                {plan === "fired_up" && (
+                  <button onClick={()=>{setShowPaywall(true);setPaywallPreselect("brutal");setShowCancelConfirm(false);}}
+                    style={{width:"100%",padding:"12px",borderRadius:"10px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
+                    Upgrade to Brutal — $5.99/mo
+                  </button>
+                )}
                 <button onClick={()=>{handleOpenPortal();setShowCancelConfirm(false);}}
-                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:c.bg3,border:`1px solid ${c.border}`,color:c.text,fontWeight:600,cursor:"pointer",fontSize:"13px",marginBottom:"8px",textAlign:"left"}}>
-                  Open Billing Portal
+                  style={{width:"100%",padding:"12px",borderRadius:"10px",background:"none",border:`1px solid ${c.border}`,color:c.text,fontWeight:600,cursor:"pointer",fontSize:"13px",textAlign:"left"}}>
+                  Cancel subscription
                 </button>
                 <button onClick={()=>setShowCancelConfirm(false)}
                   style={{width:"100%",padding:"12px",borderRadius:"10px",background:"none",border:"none",color:c.text2,fontWeight:600,cursor:"pointer",fontSize:"13px"}}>
-                  Cancel
+                  Keep my plan
                 </button>
               </div>
             )}
