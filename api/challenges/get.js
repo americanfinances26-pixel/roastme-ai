@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     .from("challenges")
     .select("id, score, oneliner, mode, input_type, expires_at, created_at")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error || !challenge) {
     return res.status(404).json({ error: "Challenge not found" });
