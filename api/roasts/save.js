@@ -47,7 +47,8 @@ export default async function handler(req, res) {
       prompt_version: 2,
     })
     .select("id")
-    .single();
+    .single()
+    .catch(() => ({ data: null, error: "save failed" }));
 
   if (error) return res.status(500).json({ error: "Failed to save roast" });
 
