@@ -647,6 +647,14 @@ export default function App() {
           setBillingProfile(profile);
           await runMigrationIfNeeded(profile);
         }
+        // Load history from Supabase
+        try {
+          const hRes = await apiCall("/api/roasts/list");
+          const hData = await hRes.json();
+          if (hData.roasts && hData.roasts.length > 0) {
+            setHistory(hData.roasts);
+          }
+        } catch(e) {}
       }
       setAuthLoading(false);
     });
@@ -665,6 +673,14 @@ export default function App() {
           setBillingProfile(profile);
           await runMigrationIfNeeded(profile);
         }
+        // Load history from Supabase on sign in
+        try {
+          const hRes = await apiCall("/api/roasts/list");
+          const hData = await hRes.json();
+          if (hData.roasts && hData.roasts.length > 0) {
+            setHistory(hData.roasts);
+          }
+        } catch(e) {}
       } else {
         setUser(session?.user ?? null);
       }
