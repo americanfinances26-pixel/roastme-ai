@@ -28,8 +28,6 @@ const VALID_INTENSITIES = ["mild", "spicy", "savage", "nuclear", "obliterate"];
 // FIX FAIL-14: plan is NOT accepted from client body.
 // Until Supabase is live, all requests are treated as "free".
 // Phase 1 will validate plan via Supabase JWT.
-const ENFORCED_PLAN = "free";  // override — remove when Supabase is live
-
 const CHAR_LIMITS  = { free: 600,  fired_up: 2000, brutal: 4000 };
 const MAX_TOKENS   = { free: 1000, fired_up: 1200, brutal: 1500 };
 
@@ -101,7 +99,17 @@ export default async function handler(req, res) {
   // ── Input validation ──────────────────────────────────────────
   // FIX FAIL-14: plan is NOT read from req.body — always enforced server-side
   const { text, mode, intensity = "savage", inputType } = req.body;
-  const plan = ENFORCED_PLAN; // "free" until Supabase JWT validation in Phase 1
+  // Read plan from Supabase JWT
+  let plan = "free";
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const authHeader = req.headers.authorization?.replace("Bearer ", "");
+  if (authHeader) {
+    const { data: { user } } = await supabase.auth.getUser(authHeader);
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+      if (profile?.plan) plan = profile.plan;
+    }
+  }
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     return res.status(400).json({ error: "Missing or invalid text" });
