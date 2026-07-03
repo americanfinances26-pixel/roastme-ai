@@ -72,17 +72,25 @@ async function handleSubscriptionChange(supabase, subscription, eventId, reason)
     .maybeSingle();
   if (existing) return; // already processed
 
+  // In newer Stripe API versions, current_period_end is on the subscription item
+  const periodEnd = subscription.current_period_end
+    || subscription.items?.data?.[0]?.current_period_end
+    || null;
+  const periodStart = subscription.current_period_start
+    || subscription.items?.data?.[0]?.current_period_start
+    || null;
+
   // Update profile
   await supabase.from("profiles").update({
     plan:                       newPlan,
     stripe_subscription_id:     subscription.id,
     stripe_subscription_status: subscription.status,
-    stripe_current_period_end:  subscription.current_period_end
-      ? new Date(subscription.current_period_end * 1000).toISOString()
+    stripe_current_period_end:  periodEnd
+      ? new Date(periodEnd * 1000).toISOString()
       : null,
     cancel_at_period_end:       subscription.cancel_at_period_end || false,
-    billing_start:              subscription.current_period_start
-      ? new Date(subscription.current_period_start * 1000).toISOString()
+    billing_start:              periodStart
+      ? new Date(periodStart * 1000).toISOString()
       : null,
   }).eq("id", profile.id);
 
