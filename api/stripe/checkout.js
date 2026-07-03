@@ -51,10 +51,8 @@ export default async function handler(req, res) {
       metadata: { supabase_user_id: user.id },
     });
     customerId = customer.id;
-    console.log("CHECKOUT: saving customer_id", customerId, "for user", user.id);
-    const { error: upsertError } = await supabase.from("profiles")
+    await supabase.from("profiles")
       .upsert({ id: user.id, stripe_customer_id: customerId, plan: "free" }, { onConflict: "id" });
-    console.log("CHECKOUT: upsert error", upsertError);
   }
 
   // If active subscription exists — update (upgrade/downgrade with prorate)
@@ -64,26 +62,53 @@ export default async function handler(req, res) {
       const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
       const currentItemId = subscription.items.data[0]?.id;
 
-      await stripe.subscriptions.update(profile.stripe_subscription_id, {
-        items: [{ id: currentItemId, price: priceId }],
-        proration_behavior: "create_prorations",
-        metadata: { supabase_user_id: user.id },
-      });
+      // Determine if upgrade or downgrade
+      const planRank = { free: 0, fired_up: 1, brutal: 2 };
+      
+      // Get current plan from Stripe subscription (not cached profile)
+      const currentPriceId = subscription.items.data[0]?.price?.id;
+      const brutalprice = process.env.STRIPE_PRICE_BRUTAL;
+      const firedUpPrice = process.env.STRIPE_PRICE_FIRED_UP;
+      const currentPlanFromStripe = currentPriceId === brutalprice ? "brutal" 
+        : currentPriceId === firedUpPrice ? "fired_up" : "free";
+      
+      const isDowngrade = (planRank[planId] || 0) < (planRank[currentPlanFromStripe] || 0);
 
-      // Optimistic update — webhook will confirm
-      const oldPlan = profile.plan;
-      await supabase.from("profiles")
-        .update({ plan: planId })
-        .eq("id", user.id);
+      if (isDowngrade) {
+        // Downgrade — do NOT change items now, only mark cancel_at_period_end
+        // Stripe will keep current price until period ends
+        // We create a new checkout session for the new price after current period
+        await supabase.from("profiles")
+          .update({ cancel_at_period_end: true })
+          .eq("id", user.id);
 
-      await supabase.from("plan_history").insert({
-        user_id:  user.id,
-        old_plan: oldPlan,
-        new_plan: planId,
-        reason:   planId === oldPlan ? "downgrade" : "upgrade",
-      });
+        return res.status(200).json({ 
+          type: "downgrade_scheduled", 
+          plan: currentPlanFromStripe  // return CURRENT plan, not the new one
+        });
 
-      return res.status(200).json({ type: "updated", plan: planId });
+      } else {
+        // Upgrade — immediate with proration
+        await stripe.subscriptions.update(profile.stripe_subscription_id, {
+          items: [{ id: currentItemId, price: priceId }],
+          proration_behavior: "create_prorations",
+          metadata: { supabase_user_id: user.id },
+        });
+
+        const oldPlan = profile.plan;
+        await supabase.from("profiles")
+          .update({ plan: planId })
+          .eq("id", user.id);
+
+        await supabase.from("plan_history").insert({
+          user_id:  user.id,
+          old_plan: oldPlan,
+          new_plan: planId,
+          reason:   "upgrade",
+        }).catch(() => {});
+
+        return res.status(200).json({ type: "updated", plan: planId });
+      }
     } catch(e) {
       // If update fails, fall through to new checkout session
     }
