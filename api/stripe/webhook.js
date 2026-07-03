@@ -58,7 +58,9 @@ async function getUserIdFromCustomer(supabase, customerId, metadata) {
 }
 
 async function handleSubscriptionChange(supabase, subscription, eventId, reason) {
-  const profile = await getUserIdFromCustomer(supabase, subscription.customer);
+  console.log("WEBHOOK: handleSubscriptionChange", subscription.customer, subscription.id);
+  const profile = await getUserIdFromCustomer(supabase, subscription.customer, subscription.metadata);
+  console.log("WEBHOOK: profile found", profile?.id || "NOT FOUND");
   if (!profile) return; // customer not found — ignore
 
   const newPlan = getPlanFromSubscription(subscription);
