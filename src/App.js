@@ -2048,9 +2048,10 @@ export default function App() {
                 </div>
                 <div style={{fontSize:"12px", color:c.text2, marginTop:"2px"}}>
                   {plan==="free" ? "5 roasts per week · Free forever" :
-                   plan==="fired_up" ? "$2.99/mo" : "$5.99/mo"}
-                  {plan!=="free" && billingProfile?.stripe_current_period_end &&
-                    ` · Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}`}
+                   billingProfile?.cancel_at_period_end && billingProfile?.stripe_current_period_end ?
+                   `Active until ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}` :
+                   plan==="fired_up" ? `$2.99/mo${billingProfile?.stripe_current_period_end ? ` · Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}` : ""}` :
+                   `$5.99/mo${billingProfile?.stripe_current_period_end ? ` · Renews ${new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}` : ""}`}
                 </div>
               </div>
               {plan==="free"
@@ -2111,6 +2112,21 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {/* Downgrade notice */}
+          {billingProfile?.cancel_at_period_end && billingProfile?.stripe_current_period_end && plan !== "free" && (
+            <div style={{marginTop:"10px", padding:"12px 16px", background:"#FFB30015", border:"1px solid #FFB30040", borderRadius:"12px", display:"flex", alignItems:"flex-start", gap:"10px"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0, marginTop:"1px"}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                <div style={{fontSize:"13px", fontWeight:700, color:"#FFB300", marginBottom:"3px"}}>
+                  Plan change scheduled
+                </div>
+                <div style={{fontSize:"12px", color:c.text2, lineHeight:1.5}}>
+                  You have full access to <strong>{plan==="brutal"?"Brutal":"Fired Up"}</strong> until <strong>{new Date(billingProfile.stripe_current_period_end).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>. After that, your plan changes to {plan==="brutal"?"Fired Up":"Free"}.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── PREFERENCES ──────────────────────────────── */}
