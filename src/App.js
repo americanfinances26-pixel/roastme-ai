@@ -508,6 +508,16 @@ export default function App() {
         setShowPaywall(false);
         setPaywallPreselect(null);
         setUpgrading(false);
+      } else if (data.type === "downgrade_scheduled") {
+        // Plan stays the same until end of period
+        const profile = await loadProfileFromSupabase(user.id);
+        if (profile) {
+          setBillingProfile(profile);
+        }
+        setShowPaywall(false);
+        setPaywallPreselect(null);
+        setShowCancelConfirm(false);
+        setUpgrading(false);
       } else {
         setUpgrading(false);
         setUpgradeError(data.error || "Payments not configured yet. Coming soon.");
@@ -726,6 +736,18 @@ export default function App() {
         setPlan(planParam); // optimistic — webhook will confirm/correct
       }
       setScreen("profile");
+      // Reload profile from Supabase to get latest subscription data
+      setTimeout(async () => {
+        try {
+          const profile = await loadProfileFromSupabase(user?.id);
+          if (profile) {
+            const effectivePlan = getEffectivePlan(profile);
+            setPlanState(effectivePlan);
+            savePlan(effectivePlan);
+            setBillingProfile(profile);
+          }
+        } catch(e) {}
+      }, 3000); // wait 3s for webhook to process
       return;
     }
 
