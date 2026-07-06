@@ -104,16 +104,21 @@ export default async function handler(req, res) {
   try {
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const authHeader = req.headers.authorization?.replace("Bearer ", "");
+    console.log("ROAST: authHeader present:", !!authHeader);
     if (authHeader) {
       const { data } = await supabase.auth.getUser(authHeader);
+      console.log("ROAST: user found:", data?.user?.id || "NOT FOUND");
       if (data?.user) {
         const { data: profile } = await supabase.from("profiles").select("plan").eq("id", data.user.id).maybeSingle();
+        console.log("ROAST: profile plan:", profile?.plan || "NOT FOUND");
         if (profile?.plan) plan = profile.plan;
       }
     }
   } catch(e) {
-    plan = "free"; // fallback on any error
+    console.log("ROAST: error reading plan:", e.message);
+    plan = "free";
   }
+  console.log("ROAST: final plan:", plan);
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     return res.status(400).json({ error: "Missing or invalid text" });
