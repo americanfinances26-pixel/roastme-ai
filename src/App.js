@@ -532,9 +532,15 @@ export default function App() {
     try {
       const res = await apiCall("/api/stripe/portal", { method: "POST" });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setUpgradeError(data.error || "Could not open billing portal. Please try again.");
+        setShowPaywall(true);
+      }
     } catch(e) {
-      console.error("Portal failed:", e);
+      setUpgradeError("Could not open billing portal. Please try again.");
+      setShowPaywall(true);
     }
   }
 
@@ -861,9 +867,14 @@ export default function App() {
     }, 30000);
 
     try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const token = session?.access_token;
       const response = await fetch("/api/roast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text, mode, intensity, inputType })
       });
       const data = await response.json();
@@ -881,14 +892,27 @@ export default function App() {
         incrementRoasts();
         setRoastsUsed(getRoastsUsed());
       }
-      saveToHistory(parsed);
-      setHistory(getHistory());
+      saveToHistory(parsed); // local cache only
 
-      // 2. Dual-write to Supabase if logged in (non-blocking)
+      // 2. Dual-write to Supabase if logged in — Supabase is source of truth
       let supabaseRoastId = null;
       if (user) {
         supabaseRoastId = await saveRoastToSupabase(parsed);
         if (supabaseRoastId) parsed.supabaseRoastId = supabaseRoastId;
+        // Always reload from Supabase after save
+        try {
+          const hRes = await apiCall("/api/roasts/list");
+          const hData = await hRes.json();
+          if (hData.roasts && hData.roasts.length > 0) {
+            setHistory(hData.roasts);
+          }
+        } catch(e) {
+          // Fallback to local if Supabase fails
+          setHistory(getHistory());
+        }
+      } else {
+        // Not logged in — use local only
+        setHistory(getHistory());
       }
 
       if (imageData) {
@@ -2986,7 +3010,7 @@ export default function App() {
         {/* B2.4 — Monthly Report Preview */}
         {history.length >= 3 && (() => {
           const now = new Date();
-          const monthName = now.toLocaleString("default", { month:"long" });
+          const monthName = now.toLocaleString("en-GB", { month:"long" });
           const thisMonth = history.filter(h => {
             const d = new Date(h.date || h.created_at);
             return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -3094,7 +3118,7 @@ export default function App() {
             const d = new Date(h.date || h.created_at);
             if (isNaN(d)) return;
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-            const label = d.toLocaleString("default", {month:"short"});
+            const label = d.toLocaleString("en-GB", {month:"short"});
             if (!monthMap[key]) monthMap[key] = { label, scores:[] };
             monthMap[key].scores.push(h.score || 0);
           });
@@ -3344,7 +3368,7 @@ export default function App() {
                 // Best score ever
                 const best = history.reduce((b,h) => (!b || (h.score||0)>(b.score||0)) ? h : b, null);
                 const bestDate = best ? new Date(best.date || best.created_at) : null;
-                const bestDateStr = bestDate && !isNaN(bestDate) ? bestDate.toLocaleString("default",{month:"short",year:"numeric"}) : "";
+                const bestDateStr = bestDate && !isNaN(bestDate) ? bestDate.toLocaleString("en-GB",{month:"short",year:"numeric"}) : "";
 
                 // Most improved month — month where avg rose most vs previous month
                 const monthMap = {};
@@ -3352,7 +3376,7 @@ export default function App() {
                   const d = new Date(h.date || h.created_at);
                   if (isNaN(d) || !h.score) return;
                   const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-                  const label = d.toLocaleString("default",{month:"short", year:"numeric"});
+                  const label = d.toLocaleString("en-GB",{month:"short",year:"numeric"});
                   if (!monthMap[key]) monthMap[key] = { label, scores:[] };
                   monthMap[key].scores.push(h.score);
                 });
