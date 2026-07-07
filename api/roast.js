@@ -1,6 +1,7 @@
 // RoastMe AI — /api/roast
 // Security: backend builds all prompts, validates all inputs, ignores plan from client.
-// Plan enforcement will move to Supabase token validation in Phase 1.
+
+import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_ORIGINS = [
   "https://roastme-ai26.vercel.app",  // actual production domain
