@@ -21,10 +21,10 @@ export default async function handler(req, res) {
   const offset = parseInt(req.query.offset || "0", 10);
   const limit  = 50;
 
-  // Only fetch summary fields — not the_fix, wrong, works, fix (heavy)
+  // Fetch all fields including wrong, works, fix, the_fix
   const { data: roasts, error } = await supabase
     .from("roasts")
-    .select("id, score, oneliner, mode, input_text, intensity, created_at")
+    .select("id, score, oneliner, verdict, mode, input_text, intensity, wrong, works, fix, the_fix, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
