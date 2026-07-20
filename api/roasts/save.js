@@ -60,7 +60,6 @@ async function recalculateCommunicationContext(supabase, userId) {
     : null;
 
   // ── Weighted average per axis
-  const totalWeight = (n * (n + 1)) / 2;
   const axisMap = {
     clarity:      "clarity_score",
     specificity:  "specificity_score",
@@ -156,10 +155,6 @@ export default async function handler(req, res) {
     primaryIssue,
   } = req.body;
 
-  // DEBUG — remove after Phase 1 validation
-  console.log("SAVE_DEBUG axisScores:", JSON.stringify(axisScores));
-  console.log("SAVE_DEBUG primaryIssue:", JSON.stringify(primaryIssue));
-
   if (!VALID_MODES.includes(mode))    return res.status(400).json({ error: "Invalid mode" });
   if (typeof score !== "number" || score < 1 || score > 10)
     return res.status(400).json({ error: "Invalid score" });
@@ -198,25 +193,20 @@ export default async function handler(req, res) {
     .select("id")
     .maybeSingle();
 
-  if (error || !roast) {
-    console.log("SAVE_DEBUG insert error:", JSON.stringify(error));
-    return res.status(500).json({ error: "Failed to save roast" });
-  }
+  if (error || !roast) return res.status(500).json({ error: "Failed to save roast" });
 
   // ── 2. Recalculate and update communication_context (synchronous)
   // Self-recovering: if this fails, next roast will recalculate from scratch.
   try {
     const ctx = await recalculateCommunicationContext(supabase, user.id);
-    console.log("SAVE_DEBUG communication_context:", JSON.stringify(ctx));
     if (ctx) {
-      const { error: profileError } = await supabase
+      await supabase
         .from("profiles")
         .update({ communication_context: ctx })
         .eq("id", user.id);
-      console.log("SAVE_DEBUG profile update error:", JSON.stringify(profileError));
     }
-  } catch (e) {
-    console.log("SAVE_DEBUG context error:", e.message);
+  } catch (_) {
+    // Never block the response — next save will recover
   }
 
   // ── 3. Respond
