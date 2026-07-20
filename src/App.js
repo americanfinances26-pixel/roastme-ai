@@ -604,27 +604,29 @@ export default function App() {
   }
 
   async function saveRoastToSupabase(roastData, roastId) {
-    // roastId = optional, the localStorage-generated id (not used for Supabase)
     try {
       const res = await apiCall("/api/roasts/save", {
         method: "POST",
         body: JSON.stringify({
-          mode:       roastData.mode,
-          inputType:  inputType,
-          inputText:  text.slice(0, 500),
-          score:      roastData.score,
-          oneliner:   roastData.oneliner,
-          verdict:    roastData.verdict,
-          wrong:      roastData.wrong,
-          works:      roastData.works,
-          fix:        roastData.fix,
-          theFix:     roastData.theFix,
+          mode:         roastData.mode,
+          inputType:    inputType,
+          inputText:    text.slice(0, 500),
+          score:        roastData.score,
+          oneliner:     roastData.oneliner,
+          verdict:      roastData.verdict,
+          wrong:        roastData.wrong,
+          works:        roastData.works,
+          fix:          roastData.fix,
+          theFix:       roastData.theFix,
           intensity,
+          // Phase 1 — axis scores and primary issue
+          axisScores:   roastData.axis_scores   || null,
+          primaryIssue: roastData.primary_issue || null,
         }),
       });
       if (!res.ok) return null;
       const { id } = await res.json();
-      return id; // Supabase UUID — needed for challenge creation
+      return id;
     } catch { return null; }
   }
 
@@ -1450,432 +1452,441 @@ export default function App() {
   );
 
   // RESULT
-  if (screen === "result" && result) return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <div style={{...styles.logo, cursor:"default"}}>
-          <div style={styles.logoFire}><FIRE_ICON/></div>
-          <span style={{fontSize:"20px", fontWeight:900, letterSpacing:"-0.5px", color:c.text}}>ROASTME</span>
-          <span style={{fontSize:"11px", fontWeight:700, color:c.accent, marginLeft:"2px"}}>AI</span>
+  if (screen === "result" && result) {
+
+    // ── Derived values ────────────────────────────────────────
+    const sc       = result.score;
+    const scColor  = scoreColor(sc);
+    const scLabel  = sc >= 8 ? "Strong" : sc >= 5 ? "Developing" : "Needs Work";
+
+    // Context vs history
+    const prevAll  = history.filter(h => h.score > 0 && h !== result).map(h => h.score);
+    const prevMode = history.filter(h => h.mode === result.mode && h.score > 0 && h !== result).map(h => h.score);
+    const now      = new Date();
+    const prevMonth = history.filter(h => {
+      const d = new Date(h.date || h.created_at);
+      return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && h.score > 0 && h !== result;
+    }).map(h => h.score);
+
+    const isNewBest      = prevAll.length > 0 && sc > Math.max(...prevAll);
+    const isNewModeBest  = !isNewBest && prevMode.length > 0 && sc > Math.max(...prevMode);
+    const isNewMonthBest = !isNewBest && !isNewModeBest && prevMonth.length >= 2 && sc > Math.max(...prevMonth);
+
+    // Contextual delta
+    let ctxLabel = null, ctxColor = null;
+    if (prevAll.length >= 2) {
+      const avg  = Math.round(prevAll.reduce((a,b)=>a+b,0) / prevAll.length * 10) / 10;
+      const diff = sc - avg;
+      if (isNewBest)                          { ctxLabel = "New personal best";                   ctxColor = scColor; }
+      else if (isNewModeBest)                 { ctxLabel = `Best ${result.mode} result yet`;       ctxColor = "#22C55E"; }
+      else if (isNewMonthBest)                { ctxLabel = "Best result this month";               ctxColor = "#22C55E"; }
+      else if (diff > 1.5)                    { ctxLabel = `+${diff.toFixed(1)} above your average`; ctxColor = "#22C55E"; }
+      else if (diff > 0.4)                    { ctxLabel = `Above your average · ${avg}/10`;      ctxColor = "#22C55E"; }
+      else if (diff < -0.4)                   { ctxLabel = `Below your average · ${avg}/10`;      ctxColor = "#FF6B35"; }
+      else                                    { ctxLabel = `On par with your average · ${avg}/10`; ctxColor = c.text2; }
+    }
+
+    // ── Styles local to result ────────────────────────────────
+    const sectionLabel = (text, color) => (
+      <div style={{fontSize:"10px", fontWeight:800, letterSpacing:"1.5px", textTransform:"uppercase", color: color || c.text2, marginBottom:"12px"}}>
+        {text}
+      </div>
+    );
+
+    const divider = (
+      <div style={{height:"1px", background:c.border, margin:"0 0 20px 0", opacity:0.5}}/>
+    );
+
+    return (
+    <div style={{...styles.app, animation:"fadeIn 0.25s ease"}}>
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes scoreReveal { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
+
+      {/* ── Minimal header — no logo noise on result screen ── */}
+      <header style={{...styles.header, borderBottom:`1px solid ${c.border}`}}>
+        <div style={{fontSize:"12px", fontWeight:700, color:c.text2, letterSpacing:"0.5px", textTransform:"uppercase"}}>
+          {result.mode} Mode
         </div>
-        <button style={styles.toggle} onClick={toggleDark}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{dark ? (<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>) : (<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>)}</svg></button>
+        <button style={styles.toggle} onClick={toggleDark}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {dark
+              ? <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>
+              : <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>}
+          </svg>
+        </button>
       </header>
 
-      <div style={{maxWidth:"480px", margin:"0 auto", padding:"20px"}}>
-        {/* Score */}
-        <div style={{...styles.card, textAlign:"center", marginBottom:"16px", padding:"28px 20px"}}>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", fontSize:"13px", color:c.text2, fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-            {result.mode} Mode
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-          </div>
-          <div style={{fontSize:"72px", fontWeight:900, color:scoreColor(animScore), lineHeight:1, transition:"color 0.3s"}}>
-            {animScore}<span style={{fontSize:"32px", color:c.text2}}>/10</span>
-          </div>
-          <div style={{marginTop:"16px", fontSize:"15px", color:c.text2, fontStyle:"italic", lineHeight:1.5}}>
-            "{result.verdict}"
+      <div style={{maxWidth:"480px", margin:"0 auto", padding:"0 20px 120px"}}>
+
+        {/* ══ BLOCK 1 — SCORE HERO ══════════════════════════════
+            What the reader sees. The number. The label. The verdict.
+            This is the moment of revelation — treated as such.
+        ═══════════════════════════════════════════════════════ */}
+        <div style={{
+          textAlign:"center",
+          padding:"40px 24px 32px",
+          animation:"scoreReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.1s both"
+        }}>
+          {/* Score */}
+          <div style={{
+            fontSize:"88px",
+            fontWeight:900,
+            lineHeight:1,
+            color:scColor,
+            letterSpacing:"-3px",
+            transition:"color 0.4s ease",
+            fontVariantNumeric:"tabular-nums",
+          }}>
+            {animScore}
+            <span style={{fontSize:"36px", fontWeight:400, color:c.text2, letterSpacing:"0px"}}>/10</span>
           </div>
 
-          {/* B3.3 — Result Memory: personal records */}
-          {(() => {
-            const prevAll   = history.filter(h => h.score > 0).map(h => h.score);
-            const prevMode  = history.filter(h => h.mode === result.mode && h.score > 0).map(h => h.score);
-            const now       = new Date();
-            const prevMonth = history.filter(h => { const d = new Date(h.date||h.created_at); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear() && h.score > 0; }).map(h=>h.score);
+          {/* Quality label */}
+          <div style={{
+            display:"inline-flex",
+            alignItems:"center",
+            gap:"6px",
+            marginTop:"10px",
+            padding:"4px 12px",
+            borderRadius:"20px",
+            background:`${scColor}15`,
+            border:`1px solid ${scColor}30`,
+          }}>
+            <div style={{width:"6px", height:"6px", borderRadius:"50%", background:scColor}}/>
+            <span style={{fontSize:"12px", fontWeight:700, color:scColor, letterSpacing:"0.5px"}}>{scLabel}</span>
+          </div>
 
-            const isNewBest       = prevAll.length > 0 && result.score > Math.max(...prevAll);
-            const isNewModeBest   = prevMode.length > 0 && result.score > Math.max(...prevMode);
-            const isNewMonthBest  = prevMonth.length > 0 && result.score > Math.max(...prevMonth);
+          {/* Verdict — the most important line. Treated as such. */}
+          <div style={{
+            marginTop:"20px",
+            fontSize:"16px",
+            fontWeight:500,
+            color:c.text,
+            lineHeight:1.6,
+            maxWidth:"340px",
+            margin:"20px auto 0",
+          }}>
+            {result.verdict}
+          </div>
 
-            if (isNewBest) return (
-              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
-                <span style={{fontSize:"16px"}}>✦</span>
-                <span style={{fontSize:"13px", fontWeight:700, color:c.accent}}>New Personal Best</span>
-                <span style={{fontSize:"16px"}}>✦</span>
-              </div>
-            );
-            if (isNewModeBest) return (
-              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
-                <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>Best {result.mode} Result Yet</span>
-              </div>
-            );
-            if (isNewMonthBest && prevMonth.length >= 2) return (
-              <div style={{marginTop:"14px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px"}}>
-                <span style={{fontSize:"13px", fontWeight:700, color:"#22C55E"}}>Best Result This Month</span>
-              </div>
-            );
-            return null;
-          })()}
+          {/* Context vs history — inline, subtle */}
+          {ctxLabel && (
+            <div style={{
+              marginTop:"16px",
+              fontSize:"12px",
+              fontWeight:600,
+              color:ctxColor,
+              opacity:0.9,
+            }}>
+              {ctxLabel}
+            </div>
+          )}
         </div>
 
-        {/* B2.8 — Result contextual line */}
-        {(() => {
-          const prevScores = history.filter(h => h.score > 0).map(h => h.score);
-          if (prevScores.length < 2) return null;
-          const avg = Math.round(prevScores.reduce((a,b)=>a+b,0) / prevScores.length * 10) / 10;
-          const diff = result.score - avg;
-
-          // Check if it's the best score in last 14 days
-          const fourteenDaysAgo = Date.now() - 14*24*60*60*1000;
-          const recent14 = history.filter(h => {
-            const d = new Date(h.date || h.created_at);
-            return !isNaN(d) && d.getTime() > fourteenDaysAgo && h.score > 0;
-          }).map(h => h.score);
-          const bestIn14 = recent14.length > 0 && result.score >= Math.max(...recent14);
-
-          // Check if it's one of best this month
-          const now = new Date();
-          const thisMonthScores = history.filter(h => {
-            const d = new Date(h.date || h.created_at);
-            return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && h.score > 0;
-          }).map(h => h.score);
-          const isTopThisMonth = thisMonthScores.length >= 3 && result.score >= Math.max(...thisMonthScores);
-
-          let label, color;
-          if (isTopThisMonth) {
-            label = "One of your strongest results this month"; color = "#22C55E";
-          } else if (bestIn14 && recent14.length >= 3) {
-            label = "Your best score in the last 14 days"; color = "#22C55E";
-          } else if (diff > 1.5) {
-            label = "Strong improvement detected"; color = "#22C55E";
-          } else if (diff > 0.4) {
-            label = `Above your recent average · ${avg}/10`; color = "#22C55E";
-          } else if (diff < -0.4) {
-            label = `Below your recent average · ${avg}/10`; color = "#FF4500";
-          } else {
-            label = `Matches your average · ${avg}/10`; color = "#FFB300";
-          }
-
-          return (
-            <div style={{display:"flex", alignItems:"center", gap:"7px", marginBottom:"14px", padding:"9px 14px", background:`${color}10`, border:`1px solid ${color}25`, borderRadius:"10px"}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                {color === "#22C55E"
-                  ? (<><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>)
-                  : color === "#FF4500"
-                  ? (<><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>)
-                  : (<line x1="5" y1="12" x2="19" y2="12"/>)}
-              </svg>
-              <span style={{fontSize:"12px", fontWeight:600, color}}>{label}</span>
-            </div>
-          );
-        })()}
-
-        {/* One-liner */}
-        <div style={{...styles.card, marginBottom:"16px", background:`${c.accent}12`, border:`1px solid ${c.accent}40`}}>
-          <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"8px", textTransform:"uppercase", letterSpacing:"1px"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            The One-Liner
+        {/* ══ BLOCK 2 — ONE-LINER ═══════════════════════════════
+            The single truth. Displayed with weight.
+            No label. No icon. Just the line.
+        ═══════════════════════════════════════════════════════ */}
+        <div style={{
+          padding:"20px 24px",
+          marginBottom:"8px",
+          borderLeft:`3px solid ${c.accent}`,
+          background:`${c.accent}07`,
+          borderRadius:"0 12px 12px 0",
+          animation:"slideUp 0.3s ease 0.2s both",
+        }}>
+          <div style={{fontSize:"18px", fontWeight:800, lineHeight:1.4, color:c.text, fontStyle:"italic"}}>
+            "{result.oneliner}"
           </div>
-          <div style={{fontSize:"17px", fontWeight:700, lineHeight:1.4, color:c.text}}>"{result.oneliner}"</div>
         </div>
 
-        {/* What's wrong */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:"#FF4500", fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF4500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            What's Wrong
-          </div>
-          {result.wrong.map((w,i) => (
-            <div key={i} style={{display:"flex", gap:"10px", marginBottom:"10px", alignItems:"flex-start"}}>
-              <span style={{color:c.accent, fontWeight:700, minWidth:"20px"}}>#{i+1}</span>
-              <span style={{fontSize:"14px", lineHeight:1.5, color:c.text}}>{w}</span>
-            </div>
-          ))}
-        </div>
+        <div style={{height:"32px"}}/>
 
-        {/* What works */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:"#22C55E", fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            What Works
-          </div>
-          {result.works.map((w,i) => (
-            <div key={i} style={{display:"flex", gap:"10px", marginBottom:"8px", alignItems:"flex-start"}}>
-              <span style={{color:"#22C55E", minWidth:"20px"}}>✓</span>
-              <span style={{fontSize:"14px", lineHeight:1.5, color:c.text}}>{w}</span>
-            </div>
-          ))}
-        </div>
+        {/* ══ BLOCK 3 — DIAGNOSIS ═══════════════════════════════
+            Problems and their fixes as a unified section.
+            They belong together — displayed together.
+        ═══════════════════════════════════════════════════════ */}
+        <div style={{animation:"slideUp 0.3s ease 0.3s both"}}>
 
-        {/* How to fix */}
-        <div style={{...styles.card, marginBottom:"16px"}}>
-          <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:"#3B82F6", fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
-            How to Fix It
-          </div>
-          {result.fix.map((f,i) => (
-            <div key={i} style={{display:"flex", gap:"10px", marginBottom:"10px", alignItems:"flex-start"}}>
-              <span style={{color:"#3B82F6", fontWeight:700, minWidth:"20px"}}>{i+1}.</span>
-              <span style={{fontSize:"14px", lineHeight:1.5, color:c.text}}>{f}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* The Fix — direct rewrite, paid only */}
-        {result.theFix && (
-          isPaid ? (
-            <div style={{...styles.card, marginBottom:"24px", background:`${c.accent}08`, border:`1px solid ${c.accent}35`}}>
-              <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                The Fix — Done For You
-              </div>
-              <div style={{fontSize:"14px", lineHeight:1.7, color:c.text, whiteSpace:"pre-wrap"}}>{result.theFix}</div>
-            </div>
-          ) : (
-            <div style={{...styles.card, marginBottom:"24px", position:"relative", overflow:"hidden"}}>
-              <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:c.accent, fontWeight:700, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                The Fix — Done For You
-              </div>
-              <div style={{fontSize:"14px", lineHeight:1.7, color:c.text2, filter:"blur(4px)", userSelect:"none"}}>{result.theFix}</div>
-              <div style={{position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background: dark ? "rgba(17,17,17,0.75)" : "rgba(255,255,255,0.8)", padding:"20px", textAlign:"center"}}>
-                <div style={{display:"flex", alignItems:"center", gap:"6px", fontSize:"13px", fontWeight:700, color:c.text, marginBottom:"8px"}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Unlock the actual rewrite
+          {/* Problems */}
+          <div style={{marginBottom:"24px"}}>
+            {sectionLabel("What the reader sees", "#FF6B35")}
+            <div style={{display:"flex", flexDirection:"column", gap:"12px"}}>
+              {result.wrong.map((w, i) => (
+                <div key={i} style={{
+                  display:"flex",
+                  gap:"14px",
+                  alignItems:"flex-start",
+                  padding:"14px 16px",
+                  background:c.bg2,
+                  borderRadius:"12px",
+                  border:`1px solid ${c.border}`,
+                }}>
+                  <span style={{
+                    fontSize:"11px",
+                    fontWeight:800,
+                    color:i === 0 ? "#FF4500" : c.text2,
+                    minWidth:"20px",
+                    paddingTop:"2px",
+                    letterSpacing:"0.5px",
+                  }}>
+                    {i === 0 ? "→" : `${i+1}`}
+                  </span>
+                  <span style={{fontSize:"14px", lineHeight:1.55, color:i === 0 ? c.text : c.text2}}>{w}</span>
                 </div>
-                <div style={{fontSize:"12px", color:c.text2, marginBottom:"14px"}}>We already wrote the exact fix — upgrade to see it</div>
-                <button style={{...styles.btn, padding:"10px 24px", fontSize:"13px", display:"flex", alignItems:"center", gap:"7px"}} onClick={() => setShowPaywall(true)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  Upgrade to Unlock
-                </button>
+              ))}
+            </div>
+          </div>
+
+          {divider}
+
+          {/* What works */}
+          {result.works?.length > 0 && (
+            <div style={{marginBottom:"24px"}}>
+              {sectionLabel("What works", "#22C55E")}
+              <div style={{display:"flex", flexDirection:"column", gap:"8px"}}>
+                {result.works.map((w, i) => (
+                  <div key={i} style={{display:"flex", gap:"12px", alignItems:"flex-start"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginTop:"3px", flexShrink:0}}>
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{fontSize:"14px", lineHeight:1.55, color:c.text2}}>{w}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          )
-        )}
+          )}
 
-        {/* FREE PLAN: roasts remaining bar */}
-        {!isPaid && (
-          <div style={{marginBottom:"20px"}}>
-            <div style={{display:"flex", justifyContent:"space-between", fontSize:"12px", color:c.text2, marginBottom:"6px"}}>
-              <span>{ROAST_WEEKLY_LIMIT - roastsUsed} of {ROAST_WEEKLY_LIMIT} roasts left this week</span>
-              <button onClick={() => setShowPaywall(true)} style={{background:"none", border:"none", color:c.accent, fontSize:"12px", fontWeight:700, cursor:"pointer", padding:0}}>Upgrade</button>
+          {divider}
+
+          {/* Fixes */}
+          <div style={{marginBottom:"8px"}}>
+            {sectionLabel("How to fix it", c.accent)}
+            <div style={{display:"flex", flexDirection:"column", gap:"10px"}}>
+              {result.fix.map((f, i) => (
+                <div key={i} style={{display:"flex", gap:"14px", alignItems:"flex-start"}}>
+                  <span style={{
+                    fontSize:"12px",
+                    fontWeight:800,
+                    color:c.accent,
+                    minWidth:"20px",
+                    paddingTop:"2px",
+                  }}>
+                    {i+1}.
+                  </span>
+                  <span style={{fontSize:"14px", lineHeight:1.55, color:c.text}}>{f}</span>
+                </div>
+              ))}
             </div>
-            <div style={{height:"3px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
-              <div style={{height:"100%", width:`${((ROAST_WEEKLY_LIMIT - roastsUsed) / ROAST_WEEKLY_LIMIT) * 100}%`, background:"#FF4500", borderRadius:"2px", transition:"width 0.5s"}}/>
-            </div>
+          </div>
+        </div>
+
+        {/* ══ BLOCK 4 — THE FIX ═════════════════════════════════
+            The rewrite. The most valuable element.
+            Paid: full text. Free: teaser with clear value prop.
+        ═══════════════════════════════════════════════════════ */}
+        {result.theFix && (
+          <div style={{marginTop:"32px", animation:"slideUp 0.3s ease 0.4s both"}}>
+            {divider}
+            {isPaid ? (
+              <div>
+                {sectionLabel("The fix", c.accent)}
+                <div style={{
+                  padding:"20px",
+                  background:c.bg2,
+                  borderRadius:"14px",
+                  border:`1px solid ${c.border}`,
+                  fontSize:"14px",
+                  lineHeight:1.75,
+                  color:c.text,
+                  whiteSpace:"pre-wrap",
+                }}>
+                  {result.theFix}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {sectionLabel("The fix", c.accent)}
+                <div style={{position:"relative", borderRadius:"14px", overflow:"hidden"}}>
+                  <div style={{
+                    padding:"20px",
+                    background:c.bg2,
+                    border:`1px solid ${c.border}`,
+                    borderRadius:"14px",
+                    fontSize:"14px",
+                    lineHeight:1.75,
+                    color:c.text,
+                    filter:"blur(5px)",
+                    userSelect:"none",
+                    pointerEvents:"none",
+                  }}>
+                    {result.theFix}
+                  </div>
+                  <div style={{
+                    position:"absolute",
+                    inset:0,
+                    display:"flex",
+                    flexDirection:"column",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:"12px",
+                    background: dark ? "rgba(10,10,10,0.82)" : "rgba(255,255,255,0.88)",
+                    borderRadius:"14px",
+                    padding:"24px",
+                    textAlign:"center",
+                  }}>
+                    <div style={{fontSize:"14px", fontWeight:700, color:c.text}}>
+                      We already rewrote it.
+                    </div>
+                    <div style={{fontSize:"13px", color:c.text2, lineHeight:1.5, maxWidth:"240px"}}>
+                      Upgrade to see the exact version that works — and understand why.
+                    </div>
+                    <button
+                      style={{...styles.btn, padding:"11px 24px", fontSize:"13px", marginTop:"4px"}}
+                      onClick={() => setShowPaywall(true)}
+                    >
+                      See The Fix
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Action buttons — 3 max, clear hierarchy */}
-        <div style={{display:"flex", flexDirection:"column", gap:"10px", marginBottom:"32px"}}>
-          {/* Hall of Fame — Brutal only, above share */}
+        {/* ══ BLOCK 5 — ACTIONS ═════════════════════════════════
+            Clean, intentional hierarchy.
+            Score-aware: high score → share first. Low score → roast again first.
+        ═══════════════════════════════════════════════════════ */}
+        <div style={{marginTop:"40px", display:"flex", flexDirection:"column", gap:"10px"}}>
+
+          {/* Hall of Fame — Brutal only, tertiary */}
           {plan === "brutal" && (
-            <button onClick={() => setScreen("halloffame-hub")}
-              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"13px",borderRadius:"12px",background:`${c.accent}15`,border:`1px solid ${c.accent}40`,color:c.accent,fontWeight:700,fontSize:"14px",cursor:"pointer",marginBottom:"4px"}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 5H4.5a2.5 2.5 0 0 0 0 5H7"/></svg>
+            <button
+              onClick={() => setScreen("halloffame-hub")}
+              style={{
+                width:"100%", display:"flex", alignItems:"center", justifyContent:"center",
+                gap:"8px", padding:"12px", borderRadius:"12px",
+                background:"transparent", border:`1px solid ${c.border}`,
+                color:c.text2, fontWeight:600, fontSize:"13px", cursor:"pointer",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 5H4.5a2.5 2.5 0 0 0 0 5H7"/></svg>
               Add to Hall of Fame
             </button>
           )}
 
-          {/* PRIMARY: Share */}
-          <button style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", fontSize:"16px", padding:"17px"}} onClick={shareRoast}>
-            {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share My Roast
-            </>)}
-          </button>
+          {/* Score-aware primary action */}
+          {sc >= 7 ? (
+            // High score → share is the natural action
+            <button
+              style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", fontSize:"15px", padding:"17px"}}
+              onClick={shareRoast}
+            >
+              {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Share My Roast
+              </>)}
+            </button>
+          ) : (
+            // Low score → roast again is the natural action
+            <button
+              style={{...styles.btn, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", fontSize:"15px", padding:"17px"}}
+              onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              Roast Again
+            </button>
+          )}
 
-          {/* SECONDARY: Roast Again — full width */}
-          <button style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"15px"}} onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-            Roast Again
-          </button>
+          {/* Secondary — the other action */}
+          {sc >= 7 ? (
+            <button
+              style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", padding:"14px"}}
+              onClick={() => { setText(""); setResult(null); setImageData(null); setScreen("app"); }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              Roast Again
+            </button>
+          ) : (
+            <button
+              style={{...styles.btnOutline, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", padding:"14px"}}
+              onClick={shareRoast}
+            >
+              {shareMsg ? <span style={{fontWeight:700}}>{shareMsg}</span> : (<>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Share My Roast
+              </>)}
+            </button>
+          )}
 
-          {/* Challenge button — full width, distinct style — REMOVED: merged above */}
-          <button style={{width:"100%", padding:"14px", borderRadius:"14px", border:"none", cursor:"pointer", fontSize:"14px", fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #FF4500, #B91C1C)", boxShadow:"0 4px 16px rgba(255,69,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}} onClick={async () => {
-            const baseUrl = window.location.href.split('?')[0];
-            let link;
-            if (user && result?.supabaseRoastId) {
-              try {
-                const res = await apiCall("/api/challenges/create", {
-                  method: "POST",
-                  body: JSON.stringify({ roastId: result.supabaseRoastId, score: result?.score, oneliner: result?.oneliner, mode: result?.mode, inputType }),
-                });
-                const data = await res.json();
-                if (data.challengeId) link = `${baseUrl}?challenge=${data.challengeId}`;
-              } catch(e) {}
-            }
-            if (!link) {
-              const battleData = encodeURIComponent(JSON.stringify({ score: result?.score, oneliner: result?.oneliner, mode: result?.mode, inputType }));
-              link = `${baseUrl}?battle=${battleData}`;
-            }
-
-            // Generate battle invite card
-            const canvas = document.createElement("canvas");
-            canvas.width = 1080;
-            canvas.height = 1080;
-            const ctx = canvas.getContext("2d");
-
-            // Background — deep black
-            ctx.fillStyle = "#0A0A0A";
-            ctx.fillRect(0, 0, 1080, 1080);
-
-            // Red-orange gradient overlay at top
-            const bgGrad = ctx.createLinearGradient(0, 0, 1080, 400);
-            bgGrad.addColorStop(0, "rgba(185,28,28,0.35)");
-            bgGrad.addColorStop(0.5, "rgba(255,69,0,0.18)");
-            bgGrad.addColorStop(1, "rgba(0,0,0,0)");
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, 1080, 1080);
-
-            // Diagonal accent line
-            ctx.save();
-            ctx.strokeStyle = "rgba(255,69,0,0.15)";
-            ctx.lineWidth = 2;
-            for (let i = -5; i < 15; i++) {
-              ctx.beginPath();
-              ctx.moveTo(i * 120 - 200, 0);
-              ctx.lineTo(i * 120 + 400, 1080);
-              ctx.stroke();
-            }
-            ctx.restore();
-
-            // Top label
-            ctx.textAlign = "center";
-            ctx.fillStyle = "rgba(255,255,255,0.5)";
-            ctx.font = "bold 28px Arial, sans-serif";
-            ctx.letterSpacing = "4px";
-            ctx.fillText("ROASTME AI  ·  BATTLE CHALLENGE", 540, 80);
-
-            // Main headline
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "900 96px Arial Black, Arial, sans-serif";
-            ctx.fillText("Think you can", 540, 210);
-
-            // "beat this?" in red gradient
-            const headGrad = ctx.createLinearGradient(200, 220, 880, 330);
-            headGrad.addColorStop(0, "#FF4500");
-            headGrad.addColorStop(1, "#B91C1C");
-            ctx.fillStyle = headGrad;
-            ctx.font = "900 110px Arial Black, Arial, sans-serif";
-            ctx.fillText("beat this?", 540, 330);
-
-            // Score display — big circle
-            const cx = 540, cy = 590, cr = 170;
-            const sc = result?.score ?? 0;
-            const scoreCol = sc <= 3 ? "#FF4500" : sc <= 6 ? "#FFB300" : "#22C55E";
-
-            // Circle glow
-            ctx.save();
-            ctx.shadowColor = scoreCol;
-            ctx.shadowBlur = 60;
-            ctx.beginPath();
-            ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-            ctx.strokeStyle = scoreCol;
-            ctx.lineWidth = 5;
-            ctx.stroke();
-            ctx.restore();
-
-            // Circle crisp
-            ctx.beginPath();
-            ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-            ctx.strokeStyle = scoreCol;
-            ctx.lineWidth = 5;
-            ctx.stroke();
-
-            // Score number
-            const scoreStr = String(sc);
-            ctx.font = "900 150px Arial Black, Arial, sans-serif";
-            const snW = ctx.measureText(scoreStr).width;
-            ctx.font = "bold 60px Arial, sans-serif";
-            const s10W = ctx.measureText("/10").width;
-            const totalW = snW + 10 + s10W;
-            const bx = cx - totalW / 2;
-
-            ctx.textAlign = "left";
-            ctx.fillStyle = scoreCol;
-            ctx.font = "900 150px Arial Black, Arial, sans-serif";
-            ctx.fillText(scoreStr, bx, cy + 50);
-            ctx.fillStyle = "rgba(255,255,255,0.4)";
-            ctx.font = "bold 60px Arial, sans-serif";
-            ctx.fillText("/10", bx + snW + 10, cy + 40);
-            ctx.textAlign = "center";
-
-            // Mode pill
-            const modeText = (result?.mode || "Savage").toUpperCase() + " MODE";
-            ctx.font = "bold 24px Arial, sans-serif";
-            const mW = ctx.measureText(modeText).width + 48;
-            const mH = 46;
-            const mX = cx - mW / 2;
-            const mY = cy + cr + 20;
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect ? ctx.roundRect(mX, mY, mW, mH, mH/2) : (()=>{
-              ctx.moveTo(mX + mH/2, mY);
-              ctx.arcTo(mX+mW, mY, mX+mW, mY+mH, mH/2);
-              ctx.arcTo(mX+mW, mY+mH, mX, mY+mH, mH/2);
-              ctx.arcTo(mX, mY+mH, mX, mY, mH/2);
-              ctx.arcTo(mX, mY, mX+mW, mY, mH/2);
-              ctx.closePath();
-            })();
-            ctx.strokeStyle = "rgba(255,69,0,0.7)";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.fillStyle = "#FF4500";
-            ctx.font = "bold 24px Arial, sans-serif";
-            ctx.fillText(modeText, cx, mY + 30);
-            ctx.restore();
-
-            // CTA bar at bottom
-            const barY = 930;
-            const barGrad = ctx.createLinearGradient(0, barY, 1080, barY);
-            barGrad.addColorStop(0, "#B91C1C");
-            barGrad.addColorStop(1, "#FF4500");
-            ctx.fillStyle = barGrad;
-            ctx.fillRect(0, barY, 1080, 150);
-
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "900 38px Arial Black, Arial, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText("Accept the challenge →", 540, 990);
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.font = "bold 26px Arial, sans-serif";
-            ctx.fillText("roastme-ai26.vercel.app", 540, 1040);
-
-            // Share the card
-            canvas.toBlob(async (blob) => {
-              const file = new File([blob], "roastme-battle-challenge.png", { type: "image/png" });
-              const shareText = `🔥 I scored ${result?.score}/10 on RoastMe AI in ${result?.mode} mode.\n\nThink you can beat me? Accept the challenge 👇\n${link}`;
-
-              try {
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                  await navigator.share({
-                    files: [file],
-                    title: "Can you beat my RoastMe score? 🔥",
-                    text: shareText
+          {/* Challenge — always tertiary */}
+          <button
+            style={{
+              width:"100%", padding:"13px", borderRadius:"12px",
+              border:"none", cursor:"pointer", fontSize:"13px", fontWeight:700,
+              color:c.accent, background:`${c.accent}12`,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:"8px",
+            }}
+            onClick={async () => {
+              const baseUrl = window.location.href.split('?')[0];
+              let link;
+              if (user && result?.supabaseRoastId) {
+                try {
+                  const res = await apiCall("/api/challenges/create", {
+                    method:"POST",
+                    body:JSON.stringify({ roastId:result.supabaseRoastId, score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }),
                   });
-                } else if (navigator.share) {
-                  await navigator.share({
-                    title: "Can you beat my RoastMe score? 🔥",
-                    text: shareText,
-                    url: link
-                  });
-                } else {
-                  await navigator.clipboard.writeText(shareText);
-                  setShareMsg("Challenge link copied!");
-                  setTimeout(() => setShareMsg(""), 3000);
-                }
-              } catch(e) {
-                if (e?.name !== "AbortError") {
-                  await navigator.clipboard.writeText(link);
-                  setShareMsg("Challenge link copied!");
-                  setTimeout(() => setShareMsg(""), 3000);
-                }
-                // AbortError = user cancelled share sheet, do nothing
+                  const data = await res.json();
+                  if (data.challengeId) link = `${baseUrl}?challenge=${data.challengeId}`;
+                } catch(e) {}
               }
-            }, "image/png");
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
-              <path d="M13 19l6-6"/>
-              <path d="M16 16l4 4"/>
-              <path d="M19 21l2-2"/>
-              <path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/>
-              <path d="M5 14l4 4"/>
-              <path d="M7 17l-3 3"/>
-              <path d="M3 19l2 2"/>
-            </svg>
+              if (!link) {
+                const battleData = encodeURIComponent(JSON.stringify({ score:result?.score, oneliner:result?.oneliner, mode:result?.mode, inputType }));
+                link = `${baseUrl}?battle=${battleData}`;
+              }
+              if (navigator.share) {
+                try { await navigator.share({ title:"Can you beat my RoastMe score?", url:link }); } catch(e) {
+                  if (e?.name !== "AbortError") { await navigator.clipboard.writeText(link); setShareMsg("Link copied!"); setTimeout(()=>setShareMsg(""),2500); }
+                }
+              } else { await navigator.clipboard.writeText(link); setShareMsg("Challenge link copied!"); setTimeout(()=>setShareMsg(""),2500); }
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4"/><path d="M7 17l-3 3"/><path d="M3 19l2 2"/></svg>
             Challenge a Friend to Beat This
           </button>
+
+          {/* Free plan — roasts remaining, low-key at the bottom */}
+          {!isPaid && (
+            <div style={{
+              marginTop:"8px",
+              padding:"10px 14px",
+              background:c.bg2,
+              borderRadius:"10px",
+              display:"flex",
+              alignItems:"center",
+              justifyContent:"space-between",
+              gap:"12px",
+            }}>
+              <div style={{flex:1}}>
+                <div style={{display:"flex", justifyContent:"space-between", fontSize:"11px", color:c.text2, marginBottom:"5px"}}>
+                  <span>{ROAST_WEEKLY_LIMIT - roastsUsed} of {ROAST_WEEKLY_LIMIT} roasts this week</span>
+                </div>
+                <div style={{height:"2px", background:c.bg3, borderRadius:"2px", overflow:"hidden"}}>
+                  <div style={{height:"100%", width:`${((ROAST_WEEKLY_LIMIT - roastsUsed) / ROAST_WEEKLY_LIMIT) * 100}%`, background:c.accent, borderRadius:"2px", transition:"width 0.5s"}}/>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPaywall(true)}
+                style={{background:"none", border:"none", color:c.accent, fontSize:"12px", fontWeight:700, cursor:"pointer", padding:0, whiteSpace:"nowrap"}}
+              >
+                Upgrade
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
@@ -1883,7 +1894,8 @@ export default function App() {
       {showPaywall && <Paywall c={c} onClose={() => { setShowPaywall(false); setPaywallPreselect(null); setUpgradeError(""); }} onUpgrade={handleUpgrade} dark={dark} currentPlan={plan} preselect={paywallPreselect} upgradeError={upgradeError}/>}
       <BottomNav screen={screen} setScreen={setScreen} dark={dark} c={c}/>
     </div>
-  );
+    );
+  }
 
   // PROFILE — Evolution Profile
   if (screen === "profile") {
