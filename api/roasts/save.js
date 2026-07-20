@@ -207,14 +207,16 @@ export default async function handler(req, res) {
   // Self-recovering: if this fails, next roast will recalculate from scratch.
   try {
     const ctx = await recalculateCommunicationContext(supabase, user.id);
+    console.log("SAVE_DEBUG communication_context:", JSON.stringify(ctx));
     if (ctx) {
-      await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ communication_context: ctx })
         .eq("id", user.id);
+      console.log("SAVE_DEBUG profile update error:", JSON.stringify(profileError));
     }
-  } catch (_) {
-    // Never block the response — next save will recover
+  } catch (e) {
+    console.log("SAVE_DEBUG context error:", e.message);
   }
 
   // ── 3. Respond
