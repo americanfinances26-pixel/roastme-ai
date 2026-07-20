@@ -795,16 +795,16 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "AI returned invalid response format" });
     }
 
-    // DEBUG — remove after Phase 1 validation
-    console.log("PHASE1_DEBUG axis_scores:", JSON.stringify(parsed.axis_scores));
-    console.log("PHASE1_DEBUG primary_issue:", JSON.stringify(parsed.primary_issue));
-    console.log("PHASE1_DEBUG valid_axis_count:", validAxisCount);
-
     // Fix 1: validate axis_scores — require at least 4 of 6 valid numeric values
     const validAxisCount = VALID_AXES.filter(axis => {
       const val = parsed.axis_scores?.[axis];
       return typeof val === "number" && val >= 1 && val <= 10;
     }).length;
+
+    // DEBUG — remove after Phase 1 validation
+    console.log("PHASE1_DEBUG axis_scores:", JSON.stringify(parsed.axis_scores));
+    console.log("PHASE1_DEBUG primary_issue:", JSON.stringify(parsed.primary_issue));
+    console.log("PHASE1_DEBUG valid_axis_count:", validAxisCount);
 
     if (!parsed.axis_scores || !Array.isArray(parsed.wrong) || validAxisCount < 4) {
       return res.status(500).json({ error: "AI response missing required fields" });
