@@ -802,6 +802,7 @@ export default async function handler(req, res) {
     }).length;
 
     if (!parsed.axis_scores || !Array.isArray(parsed.wrong) || validAxisCount < 4) {
+      console.log("VALIDATION_FAIL raw:", raw.slice(0, 500));
       return res.status(500).json({ error: "AI response missing required fields" });
     }
 
